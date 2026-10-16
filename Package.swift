@@ -31,7 +31,10 @@ let shimLinker: [LinkerSetting] = [.linkedLibrary("mtp"), .linkedLibrary("usb-1.
     + (env["FERRY_DEPS_PREFIX"].map { [.unsafeFlags(["-L\($0)/lib", "-Xlinker", "-rpath", "-Xlinker", "\($0)/lib"])] } ?? [])
 #endif
 
-let strictConcurrency: [SwiftSetting] = [.enableExperimentalFeature("StrictConcurrency")]
+let strictConcurrency: [SwiftSetting] = [
+    .enableExperimentalFeature("StrictConcurrency"),
+    .enableUpcomingFeature("InferSendableFromCaptures"),
+]
 
 var products: [Product] = [
     .library(name: "FerryCore", targets: ["FerryCore"]),

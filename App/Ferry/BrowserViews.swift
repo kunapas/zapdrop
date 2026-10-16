@@ -90,6 +90,10 @@ struct FileTable: View {
         } primaryAction: { ids in
             if ids.count == 1, let item = items(ids).first, item.isFolder { browser.open(item) }
         }
+        .onAppear {
+            // The column header starts at Name ↑; keep the rows in step with it.
+            browser.sortOrder = FerryAppModel.SortOrder(key: .name, ascending: true)
+        }
         .onChange(of: sortOrder) { _, newValue in
             guard let first = newValue.first else { return }
             let path = first.keyPath
@@ -103,7 +107,7 @@ struct FileTable: View {
             } else {
                 key = .name
             }
-            browser.sortOrder = SortOrder(key: key, ascending: first.order == .forward)
+            browser.sortOrder = FerryAppModel.SortOrder(key: key, ascending: first.order == .forward)
         }
     }
 

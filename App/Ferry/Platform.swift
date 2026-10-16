@@ -60,11 +60,10 @@ struct IOKitExclusiveAccessInspector: ExclusiveAccessInspecting {
         var iterator: io_iterator_t = 0
         guard IOServiceGetMatchingServices(kIOMainPortDefault, matching as CFDictionary, &iterator) == KERN_SUCCESS else { return nil }
         defer { IOObjectRelease(iterator) }
-        var service = IOIteratorNext(iterator)
-        while service != 0 {
+        // `while case let` binds a fresh constant per pass, so `defer` releases the current object.
+        while case let service = IOIteratorNext(iterator), service != 0 {
             defer { IOObjectRelease(service) }
             if let owner = owner(of: service) ?? ownerOfChildren(of: service) { return Self.friendlyName(owner) }
-            service = IOIteratorNext(iterator)
         }
         return nil
     }
@@ -79,11 +78,9 @@ struct IOKitExclusiveAccessInspector: ExclusiveAccessInspecting {
         var children: io_iterator_t = 0
         guard IORegistryEntryGetChildIterator(entry, kIOServicePlane, &children) == KERN_SUCCESS else { return nil }
         defer { IOObjectRelease(children) }
-        var child = IOIteratorNext(children)
-        while child != 0 {
+        while case let child = IOIteratorNext(children), child != 0 {
             defer { IOObjectRelease(child) }
             if let o = owner(of: child) { return o }
-            child = IOIteratorNext(children)
         }
         return nil
     }

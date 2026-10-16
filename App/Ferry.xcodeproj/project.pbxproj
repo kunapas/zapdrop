@@ -223,6 +223,7 @@
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ferry-mtp.Ferry";
 				PRODUCT_NAME = Ferry;
+				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InferSendableFromCaptures";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 			};
@@ -249,6 +250,7 @@
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ferry-mtp.Ferry";
 				PRODUCT_NAME = Ferry;
+				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InferSendableFromCaptures";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 			};

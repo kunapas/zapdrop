@@ -56,3 +56,14 @@ Permissive, compatible with dynamically linked LGPL libraries.
 ## D11 — No dependencies beyond libmtp/libusb
 SHA-256 is implemented in-repo (validated against NIST vectors) rather than adding swift-crypto, because only
 streaming hashing for read-back verification is needed. On macOS CryptoKit could replace it later.
+
+## D12 — Files of 4 GiB or more are read in 64-bit windows
+Reading libmtp's source (1.1.23, `ptp_usb_getdata`) shows the single-transfer `GetObject` path carries a
+32-bit length, so a ≥4 GiB file would come back truncated. Ferry therefore streams such files with
+`LIBMTP_GetPartialObject` in 8 MiB windows (Android's `GetPartialObject64`). Smaller files use the faster
+single `GetObject`. Phones without 64-bit partial reads get a clear "file too large for this phone" error;
+the byte-count check would catch any truncation regardless.
+
+## D13 — Drag-to-Finder postponed
+Finder drags need file promises that complete within Finder's patience; a multi-gigabyte MTP read can take
+minutes and blocks the single device channel. v1 copies through a chosen destination folder instead.

@@ -10,7 +10,11 @@
 3. **libmtp behaves on current Samsung/Pixel/Xiaomi firmware** in uncached mode. Checklist in
    `DEVICE_TEST_CHECKLIST.md`.
 4. **Universal dylib bundling + notarisation** of LGPL libraries works as scripted. Verified only in CI / on a Mac.
-5. **SwiftUI code compiles** — it can only be compiled on macOS; it is kept thin and built in CI.
+5. **SwiftUI code compiles** — it can only be compiled on macOS; it is kept thin, was reviewed independently
+   against the macOS 14 SDK, and is built in CI.
+6. **libmtp leaves the USB handle open on some failed opens** (upstream behaviour in 1.1.23, found in review).
+   Mitigation: Ferry checks for a competing owner before asking libmtp to open, so the common "busy" case
+   never reaches those paths; a leftover claim is cleared by reconnecting the phone. Worth an upstream patch.
 
 ## Phases
 

@@ -63,6 +63,10 @@ the UI or transfer engine.
   instruction.
 - **Case and Unicode collisions.** Android folders are case-sensitive; the default Mac disk is not. Two
   phone files `IMG.jpg` and `img.jpg` become a name clash on the Mac. Ferry detects and renames these.
+- **Cancelling while a phone has stalled** can take up to the USB timeout (about a minute): a blocked USB
+  read can't be interrupted. Ferry treats a timeout as a lost connection and reopens the session.
+- **Names and dates are cached per session** by libmtp; a file renamed on the phone while connected may
+  show its old name until you reconnect. Sizes are always re-read.
 - **Modification dates** are preserved when the phone reports them. Creation dates usually are not available over MTP.
 - **Thumbnails** come from the phone where it supports MTP thumbnails (most JPEGs). Other images are
   thumbnailed by downloading small files only (size-capped). Video thumbnails are not generated in v1.

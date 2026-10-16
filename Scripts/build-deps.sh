@@ -19,6 +19,21 @@ if (( ${#missing[@]} )); then
   exit 1
 fi
 
+# Homebrew's gettext 1.0+ keeps its autoconf macros (needed by libmtp's autogen.sh) outside aclocal's search path.
+if command -v brew >/dev/null; then
+  gettext_prefix=$(brew --prefix gettext 2>/dev/null || true)
+  if [[ -d "$gettext_prefix/share/gettext/m4" ]]; then
+    export ACLOCAL_PATH="$gettext_prefix/share/gettext/m4${ACLOCAL_PATH:+:$ACLOCAL_PATH}"
+  fi
+  if ! command -v autopoint >/dev/null && [[ -x "$gettext_prefix/bin/autopoint" ]]; then
+    export PATH="$PATH:$gettext_prefix/bin"
+  fi
+fi
+
+# libtool cannot cope with whitespace in paths, so compile in a temporary directory that has none.
+WORK=$(cd "$(mktemp -d /tmp/ferry-deps.XXXXXX)" && pwd -P)
+trap 'rm -rf "$WORK"' EXIT
+
 fetch() { # repo tag commit dir
   local repo=$1 tag=$2 commit=$3 dir=$4
   if [[ ! -d "$dir/.git" ]]; then
@@ -41,15 +56,14 @@ SDK=$(xcrun --sdk macosx --show-sdk-path)
 
 build_arch() {
   local arch=$1 host=$2
-  local prefix="$VENDOR_BUILD/$arch"
+  local prefix="$WORK/$arch"
   local flags="-arch $arch -mmacosx-version-min=$MIN_MACOS -isysroot $SDK -O2"
-  rm -rf "$prefix" "$VENDOR_BUILD/work-$arch"
-  mkdir -p "$VENDOR_BUILD/work-$arch"
-  cp -R "$VENDOR_SRC/libusb" "$VENDOR_BUILD/work-$arch/libusb"
-  cp -R "$VENDOR_SRC/libmtp" "$VENDOR_BUILD/work-$arch/libmtp"
+  mkdir -p "$WORK/src-$arch"
+  cp -R "$VENDOR_SRC/libusb" "$WORK/src-$arch/libusb"
+  cp -R "$VENDOR_SRC/libmtp" "$WORK/src-$arch/libmtp"
 
   echo "==> libusb ($arch)"
-  ( cd "$VENDOR_BUILD/work-$arch/libusb"
+  ( cd "$WORK/src-$arch/libusb"
     ./bootstrap.sh >/dev/null
     ./configure --quiet --host="$host" --prefix="$prefix" --disable-static --enable-shared \
       CFLAGS="$flags" LDFLAGS="$flags -Wl,-headerpad_max_install_names"
@@ -57,8 +71,8 @@ build_arch() {
     make install >/dev/null )
 
   echo "==> libmtp ($arch)"
-  ( cd "$VENDOR_BUILD/work-$arch/libmtp"
-    ./autogen.sh >/dev/null 2>&1
+  ( cd "$WORK/src-$arch/libmtp"
+    ./autogen.sh >"$WORK/autogen-$arch.log" 2>&1 || { cat "$WORK/autogen-$arch.log" >&2; exit 1; }
     PKG_CONFIG_PATH="$prefix/lib/pkgconfig" PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig" \
     ./configure --quiet --host="$host" --prefix="$prefix" --disable-static --enable-shared \
       --disable-mtpz --disable-doxygen \
@@ -75,15 +89,15 @@ echo "==> universal"
 OUT="$DEPS_PREFIX"
 rm -rf "$OUT"
 mkdir -p "$OUT/lib" "$OUT/include"
-cp -R "$VENDOR_BUILD/arm64/include/." "$OUT/include/"
+cp -R "$WORK/arm64/include/." "$OUT/include/"
 for lib in "$LIBUSB_DYLIB" "$LIBMTP_DYLIB"; do
-  lipo -create "$VENDOR_BUILD/arm64/lib/$lib" "$VENDOR_BUILD/x86_64/lib/$lib" -output "$OUT/lib/$lib"
+  lipo -create "$WORK/arm64/lib/$lib" "$WORK/x86_64/lib/$lib" -output "$OUT/lib/$lib"
 done
 # @rpath install names so the app finds them in Contents/Frameworks.
 install_name_tool -id "@rpath/$LIBUSB_DYLIB" "$OUT/lib/$LIBUSB_DYLIB"
 install_name_tool -id "@rpath/$LIBMTP_DYLIB" "$OUT/lib/$LIBMTP_DYLIB"
 for arch in arm64 x86_64; do
-  install_name_tool -change "$VENDOR_BUILD/$arch/lib/$LIBUSB_DYLIB" "@rpath/$LIBUSB_DYLIB" "$OUT/lib/$LIBMTP_DYLIB" 2>/dev/null || true
+  install_name_tool -change "$WORK/$arch/lib/$LIBUSB_DYLIB" "@rpath/$LIBUSB_DYLIB" "$OUT/lib/$LIBMTP_DYLIB" 2>/dev/null || true
 done
 # install_name_tool invalidates signatures; Apple Silicon refuses to load unsigned code, so re-sign ad hoc.
 # (Release signing with a Developer ID happens later, in embed-dylibs.sh.)
@@ -94,7 +108,8 @@ ln -sf "$LIBMTP_DYLIB" "$OUT/lib/libmtp.dylib"
 # Verify: universal, @rpath ids, no absolute build paths left.
 for lib in "$LIBUSB_DYLIB" "$LIBMTP_DYLIB"; do
   lipo -info "$OUT/lib/$lib"
-  if otool -L "$OUT/lib/$lib" | tail -n +2 | grep -q "$VENDOR_BUILD"; then
+  # otool prints a "<file> (architecture …):" header per slice; only the dependency lines matter.
+  if otool -L "$OUT/lib/$lib" | grep -v ':$' | grep -qF "$WORK"; then
     echo "error: $lib still references the build directory:" >&2
     otool -L "$OUT/lib/$lib" >&2
     exit 1

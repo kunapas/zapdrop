@@ -20,12 +20,15 @@ for lib in "$LIBUSB_DYLIB" "$LIBMTP_DYLIB"; do
   fi
 done
 
+runtime=(--options runtime)
+[[ "$IDENTITY" == "-" ]] && runtime=()   # matches build-app.sh: no Hardened Runtime for ad-hoc builds
+
 FW="$APP/Contents/Frameworks"
 mkdir -p "$FW" "$APP/Contents/Resources/Licenses"
 for lib in "$LIBUSB_DYLIB" "$LIBMTP_DYLIB"; do
   cp -f "$DEPS_PREFIX/lib/$lib" "$FW/$lib"
   chmod 755 "$FW/$lib"
-  codesign --force --timestamp=none --options runtime --sign "$IDENTITY" "$FW/$lib" >/dev/null
+  codesign --force --timestamp=none ${runtime[@]+"${runtime[@]}"} --sign "$IDENTITY" "$FW/$lib" >/dev/null
 done
 # Licence texts and the source offer travel inside the app (LGPL obligations; see THIRD_PARTY_NOTICES.md).
 cp -f "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$ROOT_DIR/LICENSE" "$APP/Contents/Resources/Licenses/" 2>/dev/null || true

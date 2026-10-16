@@ -45,9 +45,10 @@ else
   "$ROOT_DIR/Scripts/embed-dylibs.sh" "$APP" "$IDENTITY"
 fi
 
-timestamp="--timestamp"
-[[ "$IDENTITY" == "-" ]] && timestamp="--timestamp=none"
-codesign --force --options runtime $timestamp --entitlements "$ROOT_DIR/App/Support/Ferry.entitlements" \
+signing=(--options runtime --timestamp)
+# Ad-hoc signatures have no Team ID, so Hardened Runtime's library validation refuses the bundled dylibs.
+[[ "$IDENTITY" == "-" ]] && signing=(--timestamp=none)
+codesign --force "${signing[@]}" --entitlements "$ROOT_DIR/App/Support/Ferry.entitlements" \
   --sign "$IDENTITY" "$APP"
 codesign --verify --deep --strict --verbose=2 "$APP"
 otool -L "$APP/Contents/MacOS/$APP_NAME" | grep -E "mtp|usb" || true

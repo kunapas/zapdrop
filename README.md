@@ -42,7 +42,8 @@ cannot prove the phone's copy was intact, and Ferry doesn't claim otherwise.
 
 ## Building
 
-You need a Mac with macOS 14 or newer and either Xcode 16+ or just the Command Line Tools.
+You need a Mac with macOS 14 or newer and either Xcode 16+ or just the Command Line Tools. Running the tests
+(`swift test`) needs full Xcode, because the Command Line Tools don't include XCTest.
 
 ```sh
 # one-time: tools to build the bundled libmtp/libusb from pinned source

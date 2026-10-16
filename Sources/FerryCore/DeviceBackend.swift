@@ -50,7 +50,8 @@ public protocol DeviceSession: AnyObject, Sendable {
     /// A small preview image supplied by the phone, if it has one. Returns `nil` when unsupported.
     func thumbnail(for item: RemoteItem) async throws -> Data?
 
-    /// Fresh metadata for one object (used to detect files removed or changed during a transfer).
+    /// Metadata for one object, or nil if it no longer exists. Note: libmtp caches names and dates for the
+    /// whole session (sizes are re-read), so a rename on the phone may only show after reconnecting.
     func refreshItem(_ item: RemoteItem) async throws -> RemoteItem?
 
     func close() async

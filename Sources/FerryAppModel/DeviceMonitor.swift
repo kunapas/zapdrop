@@ -145,11 +145,16 @@ public final class DeviceMonitor {
             openFailures += 1
             switch e {
             case .deviceBusy:
-                let holder = inspector?.holderName(vendorID: device.summary.vendorID, productID: device.summary.productID)
+                var holder = inspector?.holderName(vendorID: device.summary.vendorID, productID: device.summary.productID)
+                // A failed earlier attempt by Ferry itself can leave the phone claimed; never blame ourselves —
+                // the busy guidance already says to unplug and reconnect.
+                if let h = holder, h.localizedCaseInsensitiveContains(ProcessInfo.processInfo.processName) { holder = nil }
                 state = .busy(device.summary, holder: holder)
                 pollsUntilRetry = 2
             case .notAuthorized:
-                state = .awaitingAuthorization(device.summary)
+                // Keep waiting for the user for about a minute, then say the phone isn't responding normally.
+                state = openFailures >= 25 ? .unsupported(device.summary, reason: "never finished connecting")
+                                           : .awaitingAuthorization(device.summary)
                 pollsUntilRetry = 1
             case .chargingOnlyMode:
                 state = .chargingOnly(device.summary)

@@ -61,7 +61,9 @@ static ferry_status take_errors(ferry_device *dev, ferry_status fallback) {
             if (used >= sizeof(dev->error)) used = sizeof(dev->error) - 1;
         }
         unsigned int code = 0;
-        if (e->error_text && sscanf(e->error_text, "PTP Layer error %x", &code) == 1 && dev->ptp_code == 0) {
+        /* Earlier entries can come from harmless property lookups: prefer the last code,
+         * but never lose "invalid object handle" (the object is gone). */
+        if (e->error_text && sscanf(e->error_text, "PTP Layer error %x", &code) == 1 && dev->ptp_code != 0x2009) {
             dev->ptp_code = (uint16_t)code;
         }
         ferry_status s;
@@ -83,7 +85,9 @@ static ferry_status take_errors(ferry_device *dev, ferry_status fallback) {
         switch (dev->ptp_code) {
         case 0x2009: status = FERRY_ERR_NOT_FOUND; break;      /* InvalidObjectHandle */
         case 0x02FB: status = FERRY_ERR_CANCELLED; break;      /* PTP_ERROR_CANCEL */
-        case 0x02FF: status = FERRY_ERR_DISCONNECTED; break;   /* PTP_ERROR_IO */
+        case 0x02FF:                                            /* PTP_ERROR_IO */
+        case 0x02FA:                                            /* PTP_ERROR_TIMEOUT: phone stalled; session is out of step */
+        case 0x02F9: status = FERRY_ERR_DISCONNECTED; break;   /* PTP_ERROR_NODEVICE */
         default: break;
         }
     }
@@ -167,6 +171,7 @@ ferry_status ferry_probe_access(uint32_t bus, uint8_t address) {
         libusb_device_handle *h = NULL;
         int rc = libusb_open(list[i], &h);
         if (rc == LIBUSB_ERROR_ACCESS || rc == LIBUSB_ERROR_BUSY) { status = FERRY_ERR_BUSY; break; }
+        if (rc == LIBUSB_ERROR_NO_DEVICE) { status = FERRY_ERR_NO_DEVICE; break; }
         if (rc != 0 || !h) { status = FERRY_ERR_GENERAL; break; }
         status = FERRY_OK;
         if (itf >= 0) {
@@ -210,6 +215,10 @@ ferry_status ferry_detect(ferry_raw_device *out, int max, int *count) {
 ferry_status ferry_open(uint32_t bus, uint8_t address, ferry_device **out) {
     ferry_init(init_debug);
     *out = NULL;
+    /* libmtp 1.1.23 does not close its USB handle on several open-failure paths. Checking for a
+     * competing owner first means the common "busy" case never reaches those paths. */
+    ferry_status pre = ferry_probe_access(bus, address);
+    if (pre == FERRY_ERR_BUSY || pre == FERRY_ERR_NO_DEVICE) return pre;
     LIBMTP_raw_device_t *raw = NULL;
     int n = 0;
     LIBMTP_error_number_t err = LIBMTP_Detect_Raw_Devices(&raw, &n);
@@ -225,7 +234,8 @@ ferry_status ferry_open(uint32_t bus, uint8_t address, ferry_device **out) {
         }
     }
     free(raw);
-    if (!matched) return FERRY_ERR_NO_DEVICE;
+    /* Present on USB but not (yet) recognised as MTP: usually still switching mode. */
+    if (!matched) return FERRY_ERR_CONNECTING;
     if (!mtp) {
         /* Tell "someone else has it" apart from "phone not ready yet". */
         ferry_status probe = ferry_probe_access(bus, address);
@@ -295,28 +305,40 @@ ferry_status ferry_list(ferry_device *dev, uint32_t storage_id, uint32_t parent_
     *out = NULL;
     *count = 0;
     LIBMTP_Clear_Errorstack(dev->mtp);
-    LIBMTP_file_t *files = LIBMTP_Get_Files_And_Folders(dev->mtp, storage_id, parent_id);
-    if (!files) {
-        if (LIBMTP_Get_Errorstack(dev->mtp) != NULL) return take_errors(dev, FERRY_ERR_GENERAL);
-        return FERRY_OK; /* empty folder */
-    }
-    int n = 0;
-    for (LIBMTP_file_t *f = files; f; f = f->next) n++;
+    /* LIBMTP_Get_Files_And_Folders silently drops objects whose metadata fails and reports a failed
+     * listing as "empty". List handles explicitly so failures are visible. */
+    uint32_t *ids = NULL;
+    int n = LIBMTP_Get_Children(dev->mtp, storage_id, parent_id, &ids);
+    if (n < 0) { free(ids); return take_errors(dev, FERRY_ERR_GENERAL); }
+    if (n == 0) { free(ids); LIBMTP_Clear_Errorstack(dev->mtp); return FERRY_OK; }
     ferry_object *arr = calloc((size_t)n, sizeof(ferry_object));
-    if (!arr) {
-        while (files) { LIBMTP_file_t *next = files->next; LIBMTP_destroy_file_t(files); files = next; }
-        return FERRY_ERR_NO_MEMORY;
+    if (!arr) { free(ids); return FERRY_ERR_NO_MEMORY; }
+    int filled = 0, skipped = 0;
+    for (int i = 0; i < n; i++) {
+        LIBMTP_Clear_Errorstack(dev->mtp);
+        LIBMTP_file_t *f = LIBMTP_Get_Filemetadata(dev->mtp, ids[i]);
+        if (!f) { skipped++; continue; }
+        fill_object(&arr[filled], f);
+        /* A failed 64-bit size lookup leaves an error and filesize 0: report the size as unknown instead. */
+        if (!arr[filled].is_folder && LIBMTP_Get_Errorstack(dev->mtp) != NULL) arr[filled].size = FERRY_SIZE_UNKNOWN;
+        filled++;
+        LIBMTP_destroy_file_t(f);
     }
-    int i = 0;
-    while (files) {
-        LIBMTP_file_t *next = files->next;
-        fill_object(&arr[i++], files);
-        LIBMTP_destroy_file_t(files);
-        files = next;
+    free(ids);
+    LIBMTP_Clear_Errorstack(dev->mtp);
+    if (skipped > 0) {
+        /* Either some objects are malformed, or the phone stopped answering. Ask again to tell which. */
+        uint32_t *again = NULL;
+        int m = LIBMTP_Get_Children(dev->mtp, storage_id, parent_id, &again);
+        free(again);
+        if (m < 0) {
+            ferry_free_objects(arr, filled);
+            return take_errors(dev, FERRY_ERR_DISCONNECTED);
+        }
+        snprintf(dev->error, sizeof(dev->error), "skipped %d unreadable objects", skipped);
     }
-    LIBMTP_Clear_Errorstack(dev->mtp); /* per-file property lookups may leave harmless warnings */
     *out = arr;
-    *count = n;
+    *count = filled;
     return FERRY_OK;
 }
 
@@ -344,13 +366,14 @@ typedef struct {
     void *ctx;
     int sink_failed;
     int cancelled;
+    uint64_t bytes;
 } download_ctx;
 
 static uint16_t put_handler(void *params, void *priv, uint32_t sendlen, unsigned char *data, uint32_t *putlen) {
     (void)params;
     download_ctx *c = (download_ctx *)priv;
     int rc = c->write(c->ctx, data, sendlen);
-    if (rc == 0) { *putlen = sendlen; return LIBMTP_HANDLER_RETURN_OK; }
+    if (rc == 0) { *putlen = sendlen; c->bytes += sendlen; return LIBMTP_HANDLER_RETURN_OK; }
     *putlen = 0;
     if (rc == 2) { c->cancelled = 1; return LIBMTP_HANDLER_RETURN_CANCEL; }
     c->sink_failed = 1;
@@ -371,13 +394,20 @@ static ferry_status download_failed(ferry_device *dev, download_ctx *c) {
 
 ferry_status ferry_download(ferry_device *dev, uint32_t object_id, uint64_t expected_size, uint32_t window_bytes,
                             ferry_write_fn write, ferry_progress_fn progress, void *ctx) {
-    download_ctx c = { write, progress, ctx, 0, 0 };
+    download_ctx c = { write, progress, ctx, 0, 0, 0 };
     LIBMTP_Clear_Errorstack(dev->mtp);
 
-    if (expected_size < 0xFFFFFFFFull) {
+    /* The USB container length is 32 bits and includes a 12-byte header, so one GetObject can carry at
+     * most 0xFFFFFFFF - 12 bytes of data. */
+    const uint64_t single_limit = 0xFFFFFFFFull - 12;
+
+    if (expected_size == FERRY_SIZE_UNKNOWN || expected_size < single_limit) {
         /* Normal case: one streaming GetObject; libmtp hands us USB-sized chunks. */
         int rc = LIBMTP_Get_File_To_Handler(dev->mtp, object_id, put_handler, &c, progress_handler, &c);
         if (rc != 0 || c.cancelled || c.sink_failed) return download_failed(dev, &c);
+        /* Unknown size and the transfer filled the 32-bit container: the file may be larger than what
+         * arrived, and there is no way to tell. Refuse rather than save a possibly truncated copy. */
+        if (expected_size == FERRY_SIZE_UNKNOWN && c.bytes >= single_limit) return FERRY_ERR_UNSUPPORTED;
         return FERRY_OK;
     }
 
@@ -398,7 +428,11 @@ ferry_status ferry_download(ferry_device *dev, uint32_t object_id, uint64_t expe
             if (strstr(dev->error, "not supported") || strstr(dev->error, "32bit offsets")) return FERRY_ERR_UNSUPPORTED;
             return s;
         }
-        if (got == 0) { free(buf); break; } /* device says the object ends here; caller checks the size */
+        if (got == 0) {
+            /* libmtp clamps reads to its own idea of the size; ending early means that lookup failed. */
+            free(buf);
+            return take_errors(dev, FERRY_ERR_GENERAL);
+        }
         int w = write(ctx, buf, got);
         free(buf);
         if (w == 2) return FERRY_ERR_CANCELLED;

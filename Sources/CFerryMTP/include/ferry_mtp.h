@@ -94,6 +94,9 @@ typedef struct {
 /* Refreshes and returns storages. count == 0 usually means the phone is locked. */
 ferry_status ferry_storages(ferry_device *dev, ferry_storage *out, int max, int *count);
 
+/* Size value meaning "the phone did not report an exact size". */
+#define FERRY_SIZE_UNKNOWN 0xFFFFFFFFull
+
 typedef struct {
     uint32_t id;
     uint32_t parent_id;
@@ -116,8 +119,10 @@ typedef int (*ferry_write_fn)(void *ctx, const unsigned char *data, uint32_t len
 /* Return non-zero to cancel. */
 typedef int (*ferry_progress_fn)(void *ctx, uint64_t done, uint64_t total);
 
-/* Streams one file to `write`. `expected_size` selects the strategy: files below 4 GiB use a single
- * GetObject; larger files use 64-bit partial reads in windows of `window_bytes`. */
+/* Streams one file to `write`. `expected_size` selects the strategy: files below 4 GiB (and files of
+ * unknown size) use a single GetObject; larger files use 64-bit partial reads in windows of `window_bytes`.
+ * An unknown-size file that fills a whole 32-bit transfer fails with FERRY_ERR_UNSUPPORTED rather than
+ * risk saving a truncated copy. */
 ferry_status ferry_download(ferry_device *dev, uint32_t object_id, uint64_t expected_size, uint32_t window_bytes,
                             ferry_write_fn write, ferry_progress_fn progress, void *ctx);
 

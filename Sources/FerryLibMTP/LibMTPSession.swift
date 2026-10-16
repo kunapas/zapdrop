@@ -88,6 +88,13 @@ final class LibMTPSession: DeviceSession, @unchecked Sendable {
     }
 
     func storages() async throws -> [StorageInfo] {
+        let list = try await rawStorages()
+        // libmtp reports a failed storage request as "no storage" — the same as a locked phone.
+        if list.isEmpty, !(await LibMTPBackend.isPresent(usb)) { throw FerryError.deviceDisconnected }
+        return list
+    }
+
+    private func rawStorages() async throws -> [StorageInfo] {
         try await call { dev in
             var buffer = [ferry_storage](repeating: ferry_storage(), count: 16)
             var count: Int32 = 0
@@ -159,7 +166,7 @@ final class LibMTPSession: DeviceSession, @unchecked Sendable {
                   progress: @escaping @Sendable (UInt64) -> Void) async throws -> UInt64 {
         let flag = CancellationFlag()
         let context = DownloadContext(sink: sink, progress: progress, flag: flag)
-        let expected = item.size ?? 0xFFFF_FFFF
+        let expected = item.size ?? FERRY_SIZE_UNKNOWN
         return try await withTaskCancellationHandler {
             try await call { dev in
                 if flag.isCancelled { throw FerryError.cancelled }

@@ -1,0 +1,61 @@
+name: Release (signed and notarised)
+
+# Runs only when a maintainer pushes a version tag and the signing secrets exist.
+# Secrets: DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, DEVELOPER_ID_IDENTITY,
+#          NOTARY_APPLE_ID, NOTARY_TEAM_ID, NOTARY_PASSWORD (app-specific password)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    if: ${{ github.repository_owner != '' }}
+    env:
+      HAS_SECRETS: ${{ secrets.DEVELOPER_ID_P12_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stop if signing secrets are missing
+        if: env.HAS_SECRETS != 'true'
+        run: echo "Signing secrets not configured — nothing to release." && exit 1
+      - run: brew install autoconf automake libtool pkg-config gettext
+      - name: Import Developer ID certificate
+        env:
+          P12: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/signing.keychain-db
+          KC_PASS=$(uuidgen)
+          echo "$P12" | base64 --decode > $RUNNER_TEMP/cert.p12
+          security create-keychain -p "$KC_PASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$KC_PASS" "$KEYCHAIN"
+          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KC_PASS" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+      - name: Build, sign, package
+        env:
+          FERRY_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+        run: |
+          Scripts/build-deps.sh
+          swift test
+          Scripts/build-app.sh
+          Scripts/make-dmg.sh
+      - name: Notarise
+        env:
+          APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+          PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials ferry-ci --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$PASSWORD"
+          FERRY_NOTARY_PROFILE=ferry-ci Scripts/notarize.sh
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            dist/*.dmg
+            dist/*.sha256

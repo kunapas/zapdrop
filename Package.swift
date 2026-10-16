@@ -24,9 +24,11 @@ let shimLinker: [LinkerSetting] = [
     .unsafeFlags(["-L\(depsPrefix)/lib", "-Xlinker", "-rpath", "-Xlinker", "\(depsPrefix)/lib"]),
 ]
 #else
-// Linux (CI and core development): distro packages libmtp-dev and libusb-1.0-0-dev.
-let shimCSettings: [CSetting] = []
+// Linux (CI and core development): distro packages libmtp-dev and libusb-1.0-0-dev, or a prefix built by
+// Scripts/build-deps.sh when FERRY_DEPS_PREFIX is set.
+let shimCSettings: [CSetting] = env["FERRY_DEPS_PREFIX"].map { [.unsafeFlags(["-I\($0)/include"])] } ?? []
 let shimLinker: [LinkerSetting] = [.linkedLibrary("mtp"), .linkedLibrary("usb-1.0")]
+    + (env["FERRY_DEPS_PREFIX"].map { [.unsafeFlags(["-L\($0)/lib", "-Xlinker", "-rpath", "-Xlinker", "\($0)/lib"])] } ?? [])
 #endif
 
 let strictConcurrency: [SwiftSetting] = [.enableExperimentalFeature("StrictConcurrency")]

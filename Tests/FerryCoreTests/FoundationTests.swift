@@ -169,7 +169,7 @@ final class ErrorMapperTests: XCTestCase {
     func testEveryErrorHasFriendlyText() {
         let all: [FerryError] = [.noDevice, .chargingOnlyMode, .deviceLocked, .notAuthorized, .deviceBusy(holder: "Photos"),
                                  .multipleDevices, .deviceDisconnected, .unsupportedDevice(detail: "x"),
-                                 .protocolError(detail: "PTP 0x2002"), .sourceRemoved, .sourceChanged, .sizeUnknown,
+                                 .protocolError(detail: "PTP 0x2002"), .sourceRemoved, .sourceChanged, .sizeUnknown, .fileTooLargeForPhone,
                                  .destinationUnavailable, .insufficientSpace(needed: 10_000_000_000, available: 1_000),
                                  .permissionDenied, .invalidFileName, .destinationConflict(name: "DCIM"),
                                  .unsafeDestinationPath, .sizeMismatch(expected: 2, actual: 1), .verificationFailed,

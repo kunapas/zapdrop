@@ -17,6 +17,8 @@ public enum FerryError: Error, Equatable, Sendable {
     case sourceRemoved
     case sourceChanged
     case sizeUnknown
+    /// The phone can't send files of 4 GB or more over MTP (no 64-bit partial reads).
+    case fileTooLargeForPhone
 
     // Destination
     case destinationUnavailable
@@ -41,7 +43,7 @@ public enum FerryError: Error, Equatable, Sendable {
              .deviceBusy, .deviceLocked, .notAuthorized, .insufficientSpace, .destinationUnavailable,
              .sourceChanged, .chargingOnlyMode:
             return true
-        case .noDevice, .multipleDevices, .unsupportedDevice, .sourceRemoved, .sizeUnknown, .permissionDenied,
+        case .noDevice, .multipleDevices, .unsupportedDevice, .sourceRemoved, .sizeUnknown, .permissionDenied, .fileTooLargeForPhone,
              .invalidFileName, .destinationConflict, .unsafeDestinationPath:
             return false
         }
@@ -153,6 +155,11 @@ public enum ErrorMapper {
             return .init(title: "Unknown file size",
                          message: "The phone didn't report this file's size, so the copy can't be verified.",
                          suggestions: [], canRetry: false)
+        case .fileTooLargeForPhone:
+            return .init(title: "File too large for this phone's USB mode",
+                         message: "This phone can't send files of 4 GB or more over USB file transfer.",
+                         suggestions: ["Copy this file another way, for example with a memory-card reader or a cloud or local network share."],
+                         canRetry: false)
         case .destinationUnavailable:
             return .init(title: "Destination not available",
                          message: "The folder on your Mac can't be reached — a disk may have been ejected.",

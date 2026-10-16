@@ -115,11 +115,12 @@ public final class MockPhone: @unchecked Sendable {
     public func item(named path: String, storage: StorageID? = nil) -> RemoteItem? {
         let parts = path.split(separator: "/").map(String.init)
         let s = state.current
+        guard let storageID = storage ?? s.storages.first?.id else { return nil }
         var parent = rootParentID
         var found: RemoteItem?
         for part in parts {
             found = s.nodes.values.first {
-                $0.item.parentID == parent && $0.item.name == part && (storage == nil || $0.item.storageID == storage)
+                $0.item.parentID == parent && $0.item.name == part && $0.item.storageID == storageID
             }?.item
             guard let f = found else { return nil }
             parent = f.id

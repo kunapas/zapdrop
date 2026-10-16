@@ -1,0 +1,10 @@
+.build/
+.swiftpm/
+Vendor/src/
+Vendor/build/
+dist/
+*.xcuserstate
+xcuserdata/
+DerivedData/
+.DS_Store
+*.ferrypart

@@ -82,6 +82,13 @@ public struct UserFacingError: Equatable, Sendable {
     public let message: String
     public let suggestions: [String]
     public let canRetry: Bool
+
+    public init(title: String, message: String, suggestions: [String], canRetry: Bool) {
+        self.title = title
+        self.message = message
+        self.suggestions = suggestions
+        self.canRetry = canRetry
+    }
 }
 
 public enum ErrorMapper {

@@ -45,7 +45,7 @@ jobs:
         run: xcodebuild -project App/Ferry.xcodeproj -scheme Ferry -configuration Debug -destination 'platform=macOS' build | tail -n 30
       - name: Launch smoke test (demo mode)
         run: |
-          dist/Ferry.app/Contents/MacOS/Ferry --mock &
+          dist/Zapdrop.app/Contents/MacOS/Zapdrop --mock &
           PID=$!
           sleep 8
           kill -0 $PID   # still running = launched without crashing
@@ -54,7 +54,7 @@ jobs:
         run: Scripts/make-dmg.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: Ferry-unsigned
+          name: Zapdrop-unsigned
           path: |
             dist/*.dmg
             dist/*.sha256

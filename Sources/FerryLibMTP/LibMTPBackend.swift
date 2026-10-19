@@ -102,10 +102,11 @@ public final class LibMTPBackend: DeviceBackend, @unchecked Sendable {
             let usb = USBAddress(bus: d.bus, address: d.address, vendorID: d.vendor_id, productID: d.product_id)
             let summary = DeviceSummary(id: usb.deviceID, manufacturer: KnownPhoneVendors.name(for: d.vendor_id),
                                         vendorID: d.vendor_id, productID: d.product_id)
+            let speed = USBSpeed(rawValue: Int(d.speed))
             if d.has_mtp_interface != 0 {
-                result.append(DiscoveredDevice(summary: summary, mode: .fileTransfer))
+                result.append(DiscoveredDevice(summary: summary, mode: .fileTransfer, usbSpeed: speed))
             } else if KnownPhoneVendors.isPhoneVendor(d.vendor_id), d.has_excluded_class == 0 {
-                result.append(DiscoveredDevice(summary: summary, mode: .chargingOnly))
+                result.append(DiscoveredDevice(summary: summary, mode: .chargingOnly, usbSpeed: speed))
             }
         }
         return result.sorted { $0.id.rawValue < $1.id.rawValue }

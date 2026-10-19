@@ -11,7 +11,7 @@ struct FerryApp: App {
     @State private var model: Model = FerryApp.makeModel()
 
     var body: some Scene {
-        WindowGroup("Ferry") {
+        WindowGroup("Zapdrop") {
             ContentView(model: model)
                 .frame(minWidth: 820, minHeight: 520)
                 .onAppear { model.start() }
@@ -38,6 +38,8 @@ struct FerryApp: App {
         #endif
         return Model(backend: backend, isMock: isMock, store: UserDefaults.standard,
                      inspector: IOKitExclusiveAccessInspector(), cameraDaemon: CameraDaemonReleaser(),
+                     cacheRoot: FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                        .appendingPathComponent(Bundle.main.bundleIdentifier ?? "Zapdrop", isDirectory: true),
                      decodeThumbnail: ThumbnailDecoder.decode)
     }
 }
@@ -56,6 +58,13 @@ struct FerryCommands: Commands {
                 }
             }
             .keyboardShortcut("d", modifiers: [.command, .shift])
+            Button("Quick Look") { model.togglePreview() }
+                .keyboardShortcut("y", modifiers: .command)
+                .disabled(!model.preview.isActive && !model.browser.selectedItems.contains { !$0.isFolder })
+            Divider()
+            Button("Eject Phone") { model.ejectPhone() }
+                .keyboardShortcut("e", modifiers: .command)
+                .disabled(!model.canEject)
         }
         CommandMenu("Go") {
             Button("Enclosing Folder") { model.browser.goUp() }

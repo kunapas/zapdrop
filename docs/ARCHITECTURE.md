@@ -27,7 +27,7 @@
 ┌──────────────┴───── CFerryMTP (C shim, ~300 lines) ─┐   └─────────────────────────────────────────┘
 │ ferry_mtp_* functions; only file including libmtp.h │
 └──────────────▲─────────────────────────────────────┘
-          libmtp.dylib → libusb-1.0.dylib  (bundled in Ferry.app/Contents/Frameworks)
+          libmtp.dylib → libusb-1.0.dylib  (bundled in Zapdrop.app/Contents/Frameworks)
 ```
 
 Rule: only `CFerryMTP` includes libmtp headers; only `FerryLibMTP` imports `CFerryMTP`. Swap the backend
@@ -71,7 +71,7 @@ docs/                         this folder
    sanitised relative paths; detect case/Unicode name clashes; sum 64-bit sizes.
 2. **Preflight** — check free space on the destination volume (excluding files that already exist).
 3. **Copy, one file at a time** — create folders safely (no following links), resolve duplicates
-   (policy or ask), stream into `<name>.ferrypart` in bounded chunks, `fsync`, check byte count,
+   (policy or ask), stream into `<name>.zapdroppart` in bounded chunks, `fsync`, check byte count,
    set modification date, optional read-back verification, atomic rename.
 4. **Finish** — per-item status (`completed`, `skipped`, `failed`, `cancelled`), job status
    (`completed`, `partiallyCompleted`, `failed`, `cancelled`), summary.

@@ -132,12 +132,12 @@ public enum LocalFS {
     /// Name for the in-progress file next to `finalName`. Unique, clearly marked, within 255 bytes.
     public static func partialName(for finalName: String) -> String {
         let tag = String(UInt32.random(in: 0...UInt32.max), radix: 16)
-        let suffix = ".\(tag).ferrypart"
+        let suffix = ".\(tag).zapdroppart"
         let base = FileNameSanitizer.truncate(finalName, toUTF8Bytes: FileNameSanitizer.maxComponentBytes - suffix.utf8.count)
         return base + suffix
     }
 
-    public static let partialExtension = "ferrypart"
+    public static let partialExtension = "zapdroppart"
 }
 
 // MARK: - Writing a file safely

@@ -10,12 +10,43 @@ public struct DiscoveredDevice: Hashable, Sendable, Identifiable {
     }
     public var summary: DeviceSummary
     public var mode: Mode
+    /// Negotiated USB link speed, when the scan could tell.
+    public var usbSpeed: USBSpeed?
     public var id: DeviceID { summary.id }
 
-    public init(summary: DeviceSummary, mode: Mode) {
+    public init(summary: DeviceSummary, mode: Mode, usbSpeed: USBSpeed? = nil) {
         self.summary = summary
         self.mode = mode
+        self.usbSpeed = usbSpeed
     }
+}
+
+/// The USB link the phone negotiated. A USB-C cable or port can still run at USB 2 speed, which explains slow copies.
+public enum USBSpeed: Int, Hashable, Sendable {
+    case low = 1, full, high, superSpeed, superSpeedPlus
+
+    public var displayName: String {
+        switch self {
+        case .low: return "USB 1.0 (1.5 Mbit/s)"
+        case .full: return "USB 1.1 (12 Mbit/s)"
+        case .high: return "USB 2 (480 Mbit/s)"
+        case .superSpeed: return "USB 3 (5 Gbit/s)"
+        case .superSpeedPlus: return "USB 3 (10 Gbit/s)"
+        }
+    }
+
+    /// "USB 2", "USB 3" — for tight spaces; `displayName` has the speed.
+    public var shortName: String {
+        switch self {
+        case .low, .full: return "USB 1"
+        case .high: return "USB 2"
+        case .superSpeed: return "USB 3"
+        case .superSpeedPlus: return "USB 3 (10 Gb)"
+        }
+    }
+
+    /// Below USB 3: copies are limited to roughly 20–40 MB/s whatever the phone can do.
+    public var isSlow: Bool { rawValue < USBSpeed.superSpeed.rawValue }
 }
 
 /// Receives file data as it arrives from the phone. Called serially, never concurrently.
@@ -42,6 +73,12 @@ public protocol DeviceSession: AnyObject, Sendable {
     /// Direct children of a folder (lazy, one level).
     func children(of location: RemoteLocation) async throws -> [RemoteItem]
 
+    /// The same listing delivered in pieces of about `batchSize` items as they are read, so a large folder can
+    /// be shown before it is complete. `onBatch` receives each new piece and the folder's total item count.
+    /// Honours task cancellation between pieces by throwing `FerryError.cancelled`.
+    func children(of location: RemoteLocation, batchSize: Int,
+                  onBatch: @escaping @Sendable (_ batch: [RemoteItem], _ total: Int) async -> Void) async throws -> [RemoteItem]
+
     /// Streams one file into `sink` in bounded chunks. Returns the number of bytes delivered.
     /// `progress` receives the cumulative byte count. Honours task cancellation by throwing `FerryError.cancelled`.
     func download(_ item: RemoteItem, into sink: ByteSink,
@@ -54,7 +91,23 @@ public protocol DeviceSession: AnyObject, Sendable {
     /// whole session (sizes are re-read), so a rename on the phone may only show after reconnecting.
     func refreshItem(_ item: RemoteItem) async throws -> RemoteItem?
 
+    /// Battery charge in percent, or nil if the phone doesn't report it.
+    func batteryPercent() async -> Int?
+
     func close() async
+}
+
+public extension DeviceSession {
+    /// Battery charge in percent, or nil if the phone doesn't say. Default: unknown.
+    func batteryPercent() async -> Int? { nil }
+
+    /// Sessions that can't list in pieces deliver the whole folder as one piece.
+    func children(of location: RemoteLocation, batchSize: Int,
+                  onBatch: @escaping @Sendable (_ batch: [RemoteItem], _ total: Int) async -> Void) async throws -> [RemoteItem] {
+        let all = try await children(of: location)
+        await onBatch(all, all.count)
+        return all
+    }
 }
 
 /// USB vendor IDs of Android phone makers, used only to recognise a phone in "charging only" mode.

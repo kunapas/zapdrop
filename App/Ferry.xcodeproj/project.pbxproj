@@ -14,7 +14,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		F3A100000000000000000009 /* Ferry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ferry.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3A100000000000000000009 /* Zapdrop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zapdrop.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -51,7 +51,7 @@
 		F3A10000000000000000000D /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				F3A100000000000000000009 /* Ferry.app */,
+				F3A100000000000000000009 /* Zapdrop.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,7 +83,7 @@
 				F3A100000000000000000008 /* FerryLibMTP */,
 			);
 			productName = Ferry;
-			productReference = F3A100000000000000000009 /* Ferry.app */;
+			productReference = F3A100000000000000000009 /* Zapdrop.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -221,8 +221,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ferry-mtp.Ferry";
-				PRODUCT_NAME = Ferry;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.zapdrop.Zapdrop";
+				PRODUCT_NAME = Zapdrop;
 				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InferSendableFromCaptures";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
@@ -248,8 +248,8 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 0.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "io.github.ferry-mtp.Ferry";
-				PRODUCT_NAME = Ferry;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.zapdrop.Zapdrop";
+				PRODUCT_NAME = Zapdrop;
 				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InferSendableFromCaptures";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;

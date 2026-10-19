@@ -17,6 +17,12 @@ public final class DeviceMonitor {
     public private(set) var storages: [StorageInfo] = []
     /// Bumped whenever a new session opens, so dependants can reset.
     public private(set) var sessionGeneration = 0
+    /// A phone the user ejected; left alone until they connect it again or it is unplugged.
+    public private(set) var ejectedDeviceID: DeviceID?
+    /// Charge of the connected phone in percent, if it reports one. Read on connect, then about once a minute.
+    public private(set) var batteryPercent: Int?
+    @ObservationIgnored public var batteryInterval: TimeInterval = 60
+    @ObservationIgnored private var lastBatteryCheck = Date.distantPast
 
     @ObservationIgnored private let backend: DeviceBackend
     @ObservationIgnored private let inspector: ExclusiveAccessInspecting?
@@ -38,6 +44,13 @@ public final class DeviceMonitor {
 
     public var hasMultipleDevices: Bool { devices.count > 1 }
 
+    public var selectedDevice: DiscoveredDevice? { devices.first { $0.id == selectedDeviceID } }
+
+    /// Total and free bytes across the phone's storage areas (internal plus any SD card).
+    public var storageTotals: (capacity: UInt64, free: UInt64) {
+        storages.reduce((UInt64(0), UInt64(0))) { (ProgressMath.add($0.0, $1.capacityBytes), ProgressMath.add($0.1, $1.freeBytes)) }
+    }
+
     public func start() {
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
@@ -55,6 +68,7 @@ public final class DeviceMonitor {
     }
 
     public func select(_ id: DeviceID) {
+        if id == ejectedDeviceID { return connectEjected(id) } // clicking an ejected phone connects it again
         guard id != selectedDeviceID else { return }
         closeSession()
         selectedDeviceID = id
@@ -65,9 +79,45 @@ public final class DeviceMonitor {
 
     /// Retries opening immediately (e.g. after the user quits a competing app).
     public func retryNow() {
+        Task { await retry() }
+    }
+
+    /// `retryNow`, finishing when the attempt has (or, if a poll is already running, hasn't) been made.
+    public func retry() async {
         pollsUntilRetry = 0
         if case .disconnected = state { state = .noDevice }
-        Task { await refresh() }
+        await refresh()
+    }
+
+    public var isBusy: Bool {
+        if case .busy = state { return true }
+        return false
+    }
+
+    /// Lets go of the selected phone so it can be unplugged safely or used by another app. Refused while copying.
+    /// Returns once the session is closed (any in-flight phone request finishes first).
+    public func eject() async {
+        guard let s = session, !isTransferActive() else { return }
+        ejectedDeviceID = selectedDeviceID
+        session = nil
+        storages = []
+        batteryPercent = nil
+        onChange() // stop browsing and previews before closing
+        await s.close()
+        state = .ejected(s.summary)
+        onChange()
+    }
+
+    /// Reconnects a phone the user ejected.
+    public func connectEjected(_ id: DeviceID? = nil) {
+        guard let ejected = ejectedDeviceID, id == nil || id == ejected else { return }
+        ejectedDeviceID = nil
+        if selectedDeviceID != ejected {
+            selectedDeviceID = ejected
+            openFailures = 0
+        }
+        state = .noDevice
+        retryNow()
     }
 
     /// Called by browsing or transfers when the phone vanished mid-operation.
@@ -90,6 +140,8 @@ public final class DeviceMonitor {
             return
         }
         devices = found
+        // An ejected phone that has been unplugged is treated as new when it comes back.
+        if let ejected = ejectedDeviceID, !found.contains(where: { $0.id == ejected }) { ejectedDeviceID = nil }
 
         // Selected phone gone?
         if let id = selectedDeviceID, !found.contains(where: { $0.id == id }) {
@@ -114,6 +166,7 @@ public final class DeviceMonitor {
             pollsUntilRetry = 0
         }
         guard let id = selectedDeviceID, let device = found.first(where: { $0.id == id }) else { return }
+        if id == ejectedDeviceID { return }
 
         if device.mode == .chargingOnly {
             if session != nil { closeSession() }
@@ -125,6 +178,8 @@ public final class DeviceMonitor {
             // Locked phones reveal storage once unlocked; keep checking (but never during a transfer).
             if case .locked = state, !isTransferActive() {
                 await loadStorages(session)
+            } else if state.isReady, !isTransferActive(), Date().timeIntervalSince(lastBatteryCheck) >= batteryInterval {
+                await refreshBattery(session)
             }
             return
         }
@@ -141,12 +196,13 @@ public final class DeviceMonitor {
             sessionGeneration += 1
             openFailures = 0
             await loadStorages(s)
+            if state.isReady { await refreshBattery(s) }
         } catch let e as FerryError {
             openFailures += 1
             switch e {
             case .deviceBusy:
                 var holder = inspector?.holderName(vendorID: device.summary.vendorID, productID: device.summary.productID)
-                // A failed earlier attempt by Ferry itself can leave the phone claimed; never blame ourselves —
+                // A failed earlier attempt by Zapdrop itself can leave the phone claimed; never blame ourselves —
                 // the busy guidance already says to unplug and reconnect.
                 if let h = holder, h.localizedCaseInsensitiveContains(ProcessInfo.processInfo.processName) { holder = nil }
                 state = .busy(device.summary, holder: holder)
@@ -183,11 +239,18 @@ public final class DeviceMonitor {
         }
     }
 
+    private func refreshBattery(_ s: DeviceSession) async {
+        lastBatteryCheck = Date()
+        let percent = await s.batteryPercent()
+        if session === s { batteryPercent = percent }
+    }
+
     private func closeSession() {
         if let s = session {
             Task { await s.close() }
         }
         session = nil
         storages = []
+        batteryPercent = nil
     }
 }

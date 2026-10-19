@@ -11,8 +11,9 @@ struct DeviceStatusView: View {
         let content = Self.content(for: model.monitor.state)
         VStack(spacing: 16) {
             Image(systemName: content.symbol)
-                .font(.system(size: 52, weight: .light))
-                .foregroundStyle(.secondary)
+                .font(.system(size: 54, weight: .light))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Brand.gradient)
                 .accessibilityHidden(true)
             Text(content.title).font(.title2).fontWeight(.semibold)
             if !content.message.isEmpty {
@@ -29,20 +30,28 @@ struct DeviceStatusView: View {
                 }
                 .frame(maxWidth: 440, alignment: .leading)
                 .padding(14)
-                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+                .background(.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             HStack {
                 if isBusy && model.canReleaseCameraDaemon {
                     Button("Release Phone from macOS Camera Service") { model.releaseCameraDaemon() }
-                        .help("Ends macOS's ptpcamerad for your user account so Ferry can connect. macOS starts it again when needed.")
+                        .help("Ends macOS's ptpcamerad for your user account so Zapdrop can connect. macOS starts it again when needed.")
                 }
-                if model.monitor.state != .noDevice {
+                if case .ejected = model.monitor.state {
+                    Button("Connect") { model.monitor.connectEjected() }
+                        .keyboardShortcut(.defaultAction)
+                } else if model.monitor.state != .noDevice {
                     Button("Try Again") { model.monitor.retryNow() }
                         .keyboardShortcut(.defaultAction)
                 }
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
-        .padding(32)
+        .padding(36)
+        .frame(maxWidth: 560)
+        .glassPanel(cornerRadius: 24)
+        .padding(28)
         .accessibilityElement(children: .contain)
     }
 
@@ -62,7 +71,7 @@ struct DeviceStatusView: View {
         switch state {
         case .noDevice:
             return Content(symbol: "cable.connector", title: "Connect your Android phone",
-                           message: "Ferry works over USB. Nothing is sent to the internet.",
+                           message: "Zapdrop works over USB. Nothing is sent to the internet.",
                            steps: ["Connect the phone with a USB cable that supports data.",
                                    "Unlock the phone.",
                                    "Swipe down from the top and tap the USB notification.",
@@ -88,6 +97,10 @@ struct DeviceStatusView: View {
                            message: "Files already copied are safe. Unfinished files were removed and can be retried.",
                            steps: ["Reconnect the cable and unlock the phone.",
                                    "Make sure the USB mode is still \"File transfer\"."])
+        case .ejected(let d):
+            return Content(symbol: "eject.circle", title: "\(d.displayName) was ejected",
+                           message: "It's safe to unplug the phone now, and other apps can use it.",
+                           steps: [])
         case .ready(let d):
             return Content(symbol: "checkmark.circle", title: "\(d.displayName) is ready", message: "", steps: [])
         }
@@ -121,7 +134,7 @@ struct TransferPanel: View {
                 .padding(.bottom, 10)
             }
         }
-        .background(.background)
+        .background(.ultraThinMaterial)
     }
 }
 
@@ -146,9 +159,16 @@ struct TransferRowView: View {
                     .accessibilityValue("\(Int(s.fraction * 100)) percent")
             }
             Text(detail(s)).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            if s.phase == .completed, s.completedFiles > 0 {
+                // The point of copying first: now the phone's copies can go.
+                Label("Safely on your Mac. You can delete \(s.completedFiles == 1 ? "it" : "these") on your phone to free "
+                      + "\(ByteFormatter.string(s.transferredBytes)).", systemImage: "checkmark.shield")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
         }
-        .padding(10)
-        .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
+        .padding(12)
+        .glassPanel(cornerRadius: 12)
         .accessibilityElement(children: .contain)
     }
 
@@ -383,10 +403,10 @@ struct AboutSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Ferry").font(.title2).fontWeight(.semibold)
+            Text("Zapdrop").font(.title2).fontWeight(.semibold)
             Text("Free and open source (MIT). Uses libmtp and libusb (LGPL-2.1-or-later), bundled unmodified as separate libraries.")
             Text("Privacy").font(.headline)
-            Text("Ferry works entirely on your Mac. It makes no network requests, has no accounts, analytics or telemetry, and never uploads file names, metadata or contents. Diagnostic logs stay on your Mac and hide file names.")
+            Text("Zapdrop works entirely on your Mac. It makes no network requests, has no accounts, analytics or telemetry, and never uploads file names, metadata or contents. Diagnostic logs stay on your Mac and hide file names.")
             if isMock { Text("Running in demo mode with a simulated phone.").foregroundStyle(.orange) }
             Spacer()
         }

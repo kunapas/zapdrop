@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds a universal Ferry.app with SwiftPM — the Command Line Tools are enough (no Xcode needed).
+# Builds a universal Zapdrop.app with SwiftPM — the Command Line Tools are enough (no Xcode needed).
 #   Scripts/build-app.sh                      ad-hoc signed app in dist/ (runs on this Mac)
 #   FERRY_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" Scripts/build-app.sh   release signing
 #   FERRY_MOCK_ONLY=1 Scripts/build-app.sh    demo build with the simulated phone only (no libmtp needed)
@@ -38,6 +38,7 @@ sed -e "s/\$(EXECUTABLE_NAME)/$APP_NAME/g" \
     -e "s/\$(MACOSX_DEPLOYMENT_TARGET)/$MIN_MACOS/g" \
     "$ROOT_DIR/App/Support/Info.plist" > "$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
+cp "$ROOT_DIR/App/Ferry/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns" # made by Scripts/make-icon.sh
 
 if [[ "$MOCK" == "1" ]]; then
   FERRY_MOCK_ONLY=1 "$ROOT_DIR/Scripts/embed-dylibs.sh" "$APP" "$IDENTITY"

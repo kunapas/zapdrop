@@ -39,12 +39,17 @@ public final class MockPhone: @unchecked Sendable {
         var downloadsStarted = 0
         var maxConcurrentOperations = 0
         var currentOperations = 0
+        var batteryPercent: Int? = 82
+        var usbSpeed: USBSpeed? = .superSpeed
     }
 
     let state: Locked<State>
     /// Simulated throughput in bytes per second; `nil` delivers as fast as possible.
     public var bytesPerSecond: Double? { get { _bps.current } set { _bps.withLock { $0 = newValue } } }
     private let _bps = Locked<Double?>(nil)
+    /// Simulated time to read one object's metadata while listing (real Android phones: ~10–50 ms).
+    public var listDelayPerItem: Double? { get { _listDelay.current } set { _listDelay.withLock { $0 = newValue } } }
+    private let _listDelay = Locked<Double?>(nil)
     public let chunkSize: Int
 
     public init(summary: DeviceSummary, chunkSize: Int = 256 * 1024) {
@@ -95,6 +100,8 @@ public final class MockPhone: @unchecked Sendable {
     public func setMode(_ mode: DiscoveredDevice.Mode) { state.withLock { $0.mode = mode } }
     public func setLocked(_ locked: Bool) { state.withLock { $0.locked = locked } }
     public func setBusy(holder: String?) { state.withLock { $0.busyHolder = holder } }
+    public func setBattery(_ percent: Int?) { state.withLock { $0.batteryPercent = percent } }
+    public func setUSBSpeed(_ speed: USBSpeed?) { state.withLock { $0.usbSpeed = speed } }
     /// The next `attempts` session opens fail as "not authorised yet".
     public func requireAuthorization(attempts: Int) { state.withLock { $0.authorizationPendingAttempts = attempts } }
     public func disconnect() { state.withLock { $0.connected = false } }
@@ -111,6 +118,8 @@ public final class MockPhone: @unchecked Sendable {
     public var downloadsStarted: Int { state.current.downloadsStarted }
     /// Highest number of overlapping operations seen — must stay 1 to model MTP correctly.
     public var maxConcurrentOperations: Int { state.current.maxConcurrentOperations }
+    /// Sessions opened and not yet closed — anything above 1 after things settle is a leak.
+    public var openSessions: Int { state.current.openSessions }
     public func node(_ id: ObjectID) -> Node? { state.current.nodes[id] }
     public func item(named path: String, storage: StorageID? = nil) -> RemoteItem? {
         let parts = path.split(separator: "/").map(String.init)
@@ -141,7 +150,7 @@ public final class MockDeviceBackend: DeviceBackend, @unchecked Sendable {
     public func discover() async throws -> [DiscoveredDevice] {
         phones.current.compactMap { p in
             let s = p.state.current
-            return s.connected ? DiscoveredDevice(summary: s.summary, mode: s.mode) : nil
+            return s.connected ? DiscoveredDevice(summary: s.summary, mode: s.mode, usbSpeed: s.usbSpeed) : nil
         }
     }
 
@@ -199,8 +208,27 @@ final class MockSession: DeviceSession, @unchecked Sendable {
         }
     }
 
+    func children(of location: RemoteLocation, batchSize: Int,
+                  onBatch: @escaping @Sendable (_ batch: [RemoteItem], _ total: Int) async -> Void) async throws -> [RemoteItem] {
+        let all = try await children(of: location)
+        let size = max(1, batchSize)
+        for start in stride(from: 0, to: all.count, by: size) {
+            if Task.isCancelled { throw FerryError.cancelled }
+            let batch = Array(all[start..<min(start + size, all.count)])
+            if let delay = phone.listDelayPerItem, delay > 0 {
+                try await operation { try? await Task.sleep(nanoseconds: UInt64(delay * Double(batch.count) * 1e9)) }
+            }
+            await onBatch(batch, all.count)
+        }
+        return all
+    }
+
     func refreshItem(_ item: RemoteItem) async throws -> RemoteItem? {
         try await operation { phone.state.current.nodes[item.id]?.item }
+    }
+
+    func batteryPercent() async -> Int? {
+        (try? await operation { phone.state.current.batteryPercent }) ?? nil
     }
 
     func thumbnail(for item: RemoteItem) async throws -> Data? {
@@ -253,5 +281,8 @@ final class MockSession: DeviceSession, @unchecked Sendable {
         }
     }
 
-    func close() async { closed.withLock { $0 = true } }
+    func close() async {
+        let wasOpen = closed.withLock { c in defer { c = true }; return !c }
+        if wasOpen { phone.state.withLock { $0.openSessions -= 1 } }
+    }
 }

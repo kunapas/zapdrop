@@ -83,6 +83,48 @@ final class DirectoryBrowserTests: XCTestCase {
         XCTAssertFalse(browser.canGoUp)
     }
 
+    /// A phone that takes `delay` seconds per item to list, with a 400-photo folder "Big" at the root.
+    private func makeSlowBrowser(delay: Double) async throws -> DirectoryBrowserViewModel {
+        let phone = SamplePhones.pixel()
+        let session = try await MockDeviceBackend(phones: [phone]).openSession(phone.summary.id)
+        let storages = try await session.storages()
+        let big = phone.addFolder("Big", storage: storages[0].id)
+        for i in 0..<400 { phone.addFile("IMG_\(i).jpg", in: big, storage: storages[0].id, size: 1000) }
+        phone.listDelayPerItem = delay
+        let browser = DirectoryBrowserViewModel()
+        browser.attach(session: session, storages: storages)
+        await waitUntil { !browser.isLoading && !browser.items.isEmpty }
+        return browser
+    }
+
+    func testLargeFolderShowsItemsWhileStillReading() async throws {
+        let browser = try await makeSlowBrowser(delay: 0.005) // 2 s for the whole folder
+        browser.open(browser.items.first { $0.name == "Big" }!)
+        await waitUntil { !browser.items.isEmpty }
+        XCTAssertTrue(browser.isLoading)
+        XCTAssertLessThan(browser.items.count, 400)
+        XCTAssertEqual(browser.loadProgress?.total, 400)
+        XCTAssertTrue(browser.statusText.hasPrefix("Reading folder…"), browser.statusText)
+        await waitUntil(10) { !browser.isLoading }
+        XCTAssertEqual(browser.items.count, 400)
+        XCTAssertNil(browser.loadProgress)
+        XCTAssertEqual(browser.statusText, "400 items")
+    }
+
+    func testLeavingAFolderStopsReadingIt() async throws {
+        let browser = try await makeSlowBrowser(delay: 0.02) // 8 s for the whole folder
+        browser.open(browser.items.first { $0.name == "Big" }!)
+        await waitUntil { !browser.items.isEmpty }
+        browser.goUp()
+        browser.reload() // ask the phone again rather than using the cached root
+        // The root must not wait behind the rest of "Big" (at most one more piece of 50 × 20 ms).
+        await waitUntil(2.5) { !browser.isLoading && browser.items.first?.name == "Android" }
+        XCTAssertNil(browser.loadProgress)
+        // The abandoned listing was not cached as if it were complete.
+        browser.open(browser.items.first { $0.name == "Big" }!)
+        XCTAssertTrue(browser.isLoading)
+    }
+
     func testSortingFilteringSearchAndHiddenFiles() async throws {
         let (browser, _, _) = try await makeBrowser()
         browser.open(browser.items.first { $0.name == "Download" }!)
@@ -217,6 +259,50 @@ final class DeviceMonitorTests: XCTestCase {
         await monitor.refresh()
         XCTAssertTrue(monitor.state.isReady)
         XCTAssertGreaterThan(monitor.sessionGeneration, generation)
+    }
+
+    func testEjectLetsGoUntilConnectedAgain() async throws {
+        let phone = SamplePhones.pixel()
+        let monitor = DeviceMonitor(backend: MockDeviceBackend(phones: [phone]))
+        await monitor.refresh()
+        XCTAssertEqual(phone.openSessions, 1)
+        await monitor.eject()
+        XCTAssertEqual(monitor.state, .ejected(phone.summary))
+        XCTAssertNil(monitor.session)
+        XCTAssertTrue(monitor.storages.isEmpty)
+        XCTAssertEqual(phone.openSessions, 0, "the phone is released before Zapdrop says it's safe to unplug")
+        for _ in 0..<3 { await monitor.retry() }
+        XCTAssertEqual(monitor.state, .ejected(phone.summary), "polling and Try Again don't reconnect an ejected phone")
+        XCTAssertEqual(phone.openSessions, 0)
+
+        monitor.select(phone.summary.id) // clicking the phone in the sidebar
+        await waitUntil { monitor.state.isReady }
+        XCTAssertEqual(phone.openSessions, 1)
+        XCTAssertNil(monitor.ejectedDeviceID)
+    }
+
+    func testEjectedPhoneConnectsAgainWhenPluggedBackIn() async throws {
+        let phone = SamplePhones.pixel()
+        let monitor = DeviceMonitor(backend: MockDeviceBackend(phones: [phone]))
+        await monitor.refresh()
+        await monitor.eject()
+        phone.disconnect()
+        await monitor.refresh()
+        XCTAssertEqual(monitor.state, .noDevice)
+        phone.reconnect()
+        await monitor.refresh()
+        XCTAssertTrue(monitor.state.isReady)
+    }
+
+    func testEjectIsRefusedWhileCopying() async throws {
+        let phone = SamplePhones.pixel()
+        let monitor = DeviceMonitor(backend: MockDeviceBackend(phones: [phone]))
+        monitor.isTransferActive = { true }
+        await monitor.refresh()
+        await monitor.eject()
+        XCTAssertTrue(monitor.state.isReady)
+        XCTAssertNotNil(monitor.session)
+        XCTAssertNil(monitor.ejectedDeviceID)
     }
 
     func testMultipleDevicesAndSelection() async throws {

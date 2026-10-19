@@ -13,7 +13,7 @@
 5. **SwiftUI code compiles** — it can only be compiled on macOS; it is kept thin, was reviewed independently
    against the macOS 14 SDK, and is built in CI.
 6. **libmtp leaves the USB handle open on some failed opens** (upstream behaviour in 1.1.23, found in review).
-   Mitigation: Ferry checks for a competing owner before asking libmtp to open, so the common "busy" case
+   Mitigation: Zapdrop checks for a competing owner before asking libmtp to open, so the common "busy" case
    never reaches those paths; a leftover claim is cleared by reconnecting the phone. Worth an upstream patch.
 
 ## Phases
@@ -29,6 +29,6 @@
 ## Post-MVP (deliberately not in v1)
 
 - Copy Mac → phone, delete/rename on phone (only after read-only flows are proven).
-- Drag from Ferry to Finder (needs file promises that survive multi-minute MTP reads; not reliable enough yet).
+- Drag from Zapdrop to Finder (needs file promises that survive multi-minute MTP reads; not reliable enough yet).
 - Video thumbnails, resuming partially downloaded files (`GetPartialObject64`), parallel devices.
 - Swap to mtp-rs or a native Swift MTP stack if libmtp proves limiting.

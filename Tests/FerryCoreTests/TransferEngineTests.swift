@@ -114,7 +114,7 @@ final class TransferEngineTests: XCTestCase {
         XCTAssertEqual(snap.failedFiles, 0)
         XCTAssertEqual(snap.processedBytes, snap.totalBytes)
         let files = allFiles(dest)
-        XCTAssertFalse(files.contains { $0.hasSuffix(".ferrypart") })
+        XCTAssertFalse(files.contains { $0.hasSuffix(".zapdroppart") })
         XCTAssertTrue(files.contains("Download/Notes (1).txt"))
         let pdf = phone.item(named: "Download/Boarding pass.pdf")!
         let url = dest.appendingPathComponent("Download/Boarding pass.pdf")
@@ -226,7 +226,7 @@ final class TransferEngineTests: XCTestCase {
                                    resolver: ScriptedResolver([nil]), space: FixedSpace(bytes: 1 << 40))
         await op.run(session: try await session(phone))
         XCTAssertEqual(op.snapshot().phase, .cancelled)
-        XCTAssertFalse(allFiles(dest).contains { $0.hasSuffix(".ferrypart") })
+        XCTAssertFalse(allFiles(dest).contains { $0.hasSuffix(".zapdroppart") })
     }
 
     // MARK: Cancellation, failures, retry
@@ -279,7 +279,7 @@ final class TransferEngineTests: XCTestCase {
         XCTAssertEqual(snap.phase, .partiallyCompleted)
         XCTAssertEqual(snap.failedFiles, 1)
         XCTAssertEqual(snap.completedFiles, 6)
-        XCTAssertFalse(allFiles(dest).contains { $0.hasSuffix(".ferrypart") }, "partial removed")
+        XCTAssertFalse(allFiles(dest).contains { $0.hasSuffix(".zapdroppart") }, "partial removed")
         XCTAssertEqual(op.summary().failed.map(\.entry.name), ["Quarterly report v3.docx"])
 
         let before = phone.downloadsStarted
@@ -313,7 +313,7 @@ final class TransferEngineTests: XCTestCase {
         XCTAssertEqual(snap.lastError, .deviceDisconnected)
         XCTAssertEqual(snap.phase, .partiallyCompleted)
         XCTAssertGreaterThan(snap.cancelledFiles, 0, "remaining files are reported, not silently dropped")
-        XCTAssertFalse(allFiles(dest).contains { $0.hasSuffix(".ferrypart") })
+        XCTAssertFalse(allFiles(dest).contains { $0.hasSuffix(".zapdroppart") })
 
         // The phone comes back with a fresh session where every object has a different ID (Android does this).
         let reborn = MockPhone(summary: phone.summary)

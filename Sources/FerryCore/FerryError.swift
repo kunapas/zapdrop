@@ -1,6 +1,6 @@
 import Foundation
 
-/// Every failure Ferry can report. Raw library messages are kept in `detail` for logs only.
+/// Every failure Zapdrop can report. Raw library messages are kept in `detail` for logs only.
 public enum FerryError: Error, Equatable, Sendable {
     // Device / connection
     case noDevice
@@ -95,7 +95,7 @@ public enum ErrorMapper {
     public static func map(_ error: Error) -> UserFacingError {
         guard let e = error as? FerryError else {
             return UserFacingError(title: "Something went wrong",
-                                   message: "Ferry hit an unexpected problem.",
+                                   message: "Zapdrop hit an unexpected problem.",
                                    suggestions: ["Try again. If it keeps happening, reconnect the phone."],
                                    canRetry: true)
         }
@@ -129,7 +129,7 @@ public enum ErrorMapper {
         case .deviceBusy(let holder):
             let who = holder.map { "\"\($0)\"" } ?? "another app"
             return .init(title: "Phone is in use by another app",
-                         message: "\(who) is using the phone, so Ferry can't reach it. Only one app can use it at a time.",
+                         message: "\(who) is using the phone, so Zapdrop can't reach it. Only one app can use it at a time.",
                          suggestions: ["Quit Image Capture, Photos, Android File Transfer, Smart Switch, OpenMTP or similar apps.",
                                        "If it still doesn't work, use \"Release phone from macOS camera service\".",
                                        "Then unplug and reconnect the phone."], canRetry: true)
@@ -143,7 +143,7 @@ public enum ErrorMapper {
                                        "Reconnect, then use Retry — files already copied are kept."], canRetry: true)
         case .unsupportedDevice:
             return .init(title: "This phone isn't responding normally",
-                         message: "The phone uses an unusual file-transfer implementation Ferry couldn't work with.",
+                         message: "The phone uses an unusual file-transfer implementation Zapdrop couldn't work with.",
                          suggestions: ["Reconnect the phone and try again.",
                                        "Please report your phone model (see Troubleshooting)."], canRetry: false)
         case .protocolError:
@@ -179,7 +179,7 @@ public enum ErrorMapper {
                          message: detail,
                          suggestions: ["Free up space or choose a folder on another disk, then Retry."], canRetry: true)
         case .permissionDenied:
-            return .init(title: "Ferry can't write here",
+            return .init(title: "Zapdrop can't write here",
                          message: "You don't have permission to save files in this folder.",
                          suggestions: ["Choose a different destination folder."], canRetry: false)
         case .invalidFileName:
@@ -187,11 +187,11 @@ public enum ErrorMapper {
                          message: "This file's name can't be used on your Mac.", suggestions: [], canRetry: false)
         case .destinationConflict(let name):
             return .init(title: "Name already in use",
-                         message: "Something named \"\(DisplayText.clean(name))\" already exists where Ferry needs to save.",
+                         message: "Something named \"\(DisplayText.clean(name))\" already exists where Zapdrop needs to save.",
                          suggestions: ["Rename or move the existing item, then Retry."], canRetry: false)
         case .unsafeDestinationPath:
             return .init(title: "Unsafe destination",
-                         message: "Ferry won't save through a link or alias inside the destination folder.",
+                         message: "Zapdrop won't save through a link or alias inside the destination folder.",
                          suggestions: ["Choose a regular folder as the destination."], canRetry: false)
         case .sizeMismatch:
             return .init(title: "Copy incomplete",

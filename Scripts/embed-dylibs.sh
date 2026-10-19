@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Copies libmtp/libusb into an app bundle's Frameworks folder and signs them.
 # Used by the Xcode project (Run Script phase) and by build-app.sh.
-#   embed-dylibs.sh <path/to/Ferry.app> [signing identity]   (identity defaults to ad-hoc "-")
+#   embed-dylibs.sh <path/to/Zapdrop.app> [signing identity]   (identity defaults to ad-hoc "-")
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 

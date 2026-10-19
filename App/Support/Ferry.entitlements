@@ -3,7 +3,7 @@
 <!--
   Release build: Developer ID + Hardened Runtime, NOT sandboxed (docs/DECISIONS.md D5).
   No exceptions are needed: libusb talks to IOKit directly, and the bundled dylibs are signed
-  with the same identity as the app. No network entitlement exists because Ferry never uses the network.
+  with the same identity as the app. No network entitlement exists because Zapdrop never uses the network.
 -->
 <plist version="1.0">
 <dict/>

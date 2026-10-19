@@ -43,7 +43,7 @@ public struct ConsoleLogger: ApplicationLogger {
     public func log(_ level: LogLevel, _ category: String, _ message: String, privateValue: String?) {
         guard level >= minimumLevel else { return }
         let p = privateValue.map { redactPrivate ? " <private>" : " \($0)" } ?? ""
-        FileHandle.standardError.write(Data("[Ferry][\(category)] \(message)\(p)\n".utf8))
+        FileHandle.standardError.write(Data("[Zapdrop][\(category)] \(message)\(p)\n".utf8))
     }
 }
 

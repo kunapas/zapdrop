@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Packages dist/Ferry.app into dist/Ferry-<version>.dmg (drag-to-Applications layout).
+# Packages dist/Zapdrop.app into dist/Zapdrop-<version>.dmg (drag-to-Applications layout).
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 

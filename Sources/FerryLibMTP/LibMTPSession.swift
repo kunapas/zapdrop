@@ -123,17 +123,48 @@ final class LibMTPSession: DeviceSession, @unchecked Sendable {
     }
 
     func children(of location: RemoteLocation) async throws -> [RemoteItem] {
-        try await call { dev in
-            var objects: UnsafeMutablePointer<ferry_object>?
+        try await children(of: location, batchSize: 200) { _, _ in }
+    }
+
+    /// One request for the handles, then one metadata request per object, in separate device-queue jobs of
+    /// `batchSize` so other work (and cancellation) can get in between on folders of thousands of items.
+    func children(of location: RemoteLocation, batchSize: Int,
+                  onBatch: @escaping @Sendable (_ batch: [RemoteItem], _ total: Int) async -> Void) async throws -> [RemoteItem] {
+        let started = Date()
+        let ids: [UInt32] = try await call { dev in
+            var ids: UnsafeMutablePointer<UInt32>?
             var count: Int32 = 0
-            let status = ferry_list(dev, location.storageID, location.folderID, &objects, &count)
+            let status = ferry_list_handles(dev, location.storageID, location.folderID, &ids, &count)
             guard status == FERRY_OK else { throw self.error(for: status, device: dev, context: "list") }
-            defer { ferry_free_objects(objects, count) }
-            guard let objects, count > 0 else { return [] }
-            return UnsafeBufferPointer(start: objects, count: Int(count))
-                .filter { $0.id != location.folderID } // malformed devices sometimes list a folder inside itself
-                .map { Self.item(from: $0, location: location) }
+            defer { ferry_free(ids) }
+            guard let ids, count > 0 else { return [] }
+            return Array(UnsafeBufferPointer(start: ids, count: Int(count)))
         }
+        var all: [RemoteItem] = []
+        all.reserveCapacity(ids.count)
+        for start in stride(from: 0, to: ids.count, by: max(1, batchSize)) {
+            if Task.isCancelled { throw FerryError.cancelled }
+            let slice = Array(ids[start..<min(start + max(1, batchSize), ids.count)])
+            let batch: [RemoteItem] = try await call { dev in
+                var objects: UnsafeMutablePointer<ferry_object>?
+                var count: Int32 = 0
+                let status = slice.withUnsafeBufferPointer {
+                    ferry_list_objects(dev, location.storageID, location.folderID, $0.baseAddress, Int32($0.count),
+                                       &objects, &count)
+                }
+                guard status == FERRY_OK else { throw self.error(for: status, device: dev, context: "list") }
+                defer { ferry_free_objects(objects, count) }
+                guard let objects, count > 0 else { return [] }
+                return UnsafeBufferPointer(start: objects, count: Int(count))
+                    .filter { $0.id != location.folderID } // malformed devices sometimes list a folder inside itself
+                    .map { Self.item(from: $0, location: location) }
+            }
+            all += batch
+            await onBatch(batch, ids.count)
+        }
+        let ms = Int(Date().timeIntervalSince(started) * 1000)
+        Log.info("mtp", "Listed \(all.count) items in \(ms) ms (\(ids.isEmpty ? 0 : ms / ids.count) ms per item)")
+        return all
     }
 
     func refreshItem(_ item: RemoteItem) async throws -> RemoteItem? {
@@ -181,6 +212,11 @@ final class LibMTPSession: DeviceSession, @unchecked Sendable {
         } onCancel: {
             flag.cancel()
         }
+    }
+
+    func batteryPercent() async -> Int? {
+        guard let percent = try? await call({ dev in ferry_battery_percent(dev) }), percent >= 0 else { return nil }
+        return Int(percent)
     }
 
     func close() async {

@@ -1,6 +1,6 @@
 // swift-tools-version:5.10
 //
-// Ferry — copy photos, videos and files from an Android phone to a Mac over USB (MTP).
+// Zapdrop — copy photos, videos and files from an Android phone to a Mac over USB (MTP).
 // This package is the source of truth for all code. See docs/ARCHITECTURE.md.
 //
 // Environment switches (read when the package is resolved):
@@ -48,6 +48,8 @@ var targets: [Target] = [
     .target(name: "FerryAppModel", dependencies: ["FerryCore"], swiftSettings: strictConcurrency),
     .testTarget(name: "FerryCoreTests", dependencies: ["FerryCore", "FerryMock"], swiftSettings: strictConcurrency),
     .testTarget(name: "FerryAppModelTests", dependencies: ["FerryAppModel", "FerryCore", "FerryMock"], swiftSettings: strictConcurrency),
+    // Long-running stress and soak tests; skipped unless FERRY_STRESS_TESTS=1 (docs/TESTING.md).
+    .testTarget(name: "FerryStressTests", dependencies: ["FerryAppModel", "FerryCore", "FerryMock"], swiftSettings: strictConcurrency),
 ]
 
 if !mockOnly {
@@ -68,6 +70,7 @@ targets.append(
         name: "FerryApp",
         dependencies: appDependencies,
         path: "App/Ferry",
+        exclude: ["AppIcon.icns"], // copied into the bundle by Scripts/build-app.sh (and by Xcode)
         swiftSettings: strictConcurrency,
         linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
     )
@@ -76,7 +79,7 @@ products.append(.executable(name: "FerryApp", targets: ["FerryApp"]))
 #endif
 
 let package = Package(
-    name: "Ferry",
+    name: "Ferry", // the package keeps its original code name; the app is called Zapdrop
     platforms: [.macOS(.v14)],
     products: products,
     targets: targets

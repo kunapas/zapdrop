@@ -48,23 +48,23 @@ the UI or transfer engine.
 
 - **`ptpcamerad` / Image Capture contention.** On connect, macOS's camera daemon (and apps like Photos,
   Image Capture, Android File Transfer, Samsung Smart Switch, OpenMTP) may claim the phone's USB interface.
-  Only one program can use it at a time. Ferry detects this, names the likely holder, and offers a
+  Only one program can use it at a time. Zapdrop detects this, names the likely holder, and offers a
   user-initiated "Release phone from macOS camera service" button (it ends the user's own `ptpcamerad`
-  process, which macOS restarts later). This is why Ferry is **not sandboxed** in v1 (see Decisions).
-- **MTP is one-request-at-a-time.** Ferry runs one device operation at a time. Parallel copies would not be faster
+  process, which macOS restarts later). This is why Zapdrop is **not sandboxed** in v1 (see Decisions).
+- **MTP is one-request-at-a-time.** Zapdrop runs one device operation at a time. Parallel copies would not be faster
   and break some phones.
-- **No source checksums.** Android's MTP server does not expose file hashes. Ferry verifies byte counts and can
+- **No source checksums.** Android's MTP server does not expose file hashes. Zapdrop verifies byte counts and can
   optionally re-read the written file to confirm it matches what arrived over USB, but it **cannot**
   cryptographically prove the file equals the phone's copy.
 - **Files >4 GB** depend on the phone reporting 64-bit sizes (MTP object property `ObjectSize`). Modern
   Android does; very old or unusual devices may report 4 GB and fail. Needs real-device verification.
 - **Locked phone / permission prompt.** Android hides storage until the phone is unlocked (and on some brands
-  until "Allow access to phone data" is tapped). MTP cannot tell these two apart; Ferry shows one combined
+  until "Allow access to phone data" is tapped). MTP cannot tell these two apart; Zapdrop shows one combined
   instruction.
 - **Case and Unicode collisions.** Android folders are case-sensitive; the default Mac disk is not. Two
-  phone files `IMG.jpg` and `img.jpg` become a name clash on the Mac. Ferry detects and renames these.
+  phone files `IMG.jpg` and `img.jpg` become a name clash on the Mac. Zapdrop detects and renames these.
 - **Cancelling while a phone has stalled** can take up to the USB timeout (about a minute): a blocked USB
-  read can't be interrupted. Ferry treats a timeout as a lost connection and reopens the session.
+  read can't be interrupted. Zapdrop treats a timeout as a lost connection and reopens the session.
 - **Names and dates are cached per session** by libmtp; a file renamed on the phone while connected may
   show its old name until you reconnect. Sizes are always re-read.
 - **Modification dates** are preserved when the phone reports them. Creation dates usually are not available over MTP.

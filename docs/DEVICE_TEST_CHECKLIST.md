@@ -17,8 +17,8 @@ Also vary: Android 10, 12, 14, 15/16; Apple Silicon and Intel Macs; macOS 14, 15
 USB-A to C cables; a hub.
 
 ## Before you start
-- Fresh build: `Scripts/build-app.sh`, launch `dist/Ferry.app`.
-- Open Console.app filtered to `Ferry` to capture logs.
+- Fresh build: `Scripts/build-app.sh`, launch `dist/Zapdrop.app`.
+- Open Console.app filtered to `Zapdrop` to capture logs.
 - Prepare on the phone: a folder with 1,000+ small photos, a video over 4 GB (e.g. 30+ minutes of 4K),
   a file with a long name (200+ characters), names differing only by case, and an empty folder.
 
@@ -45,7 +45,7 @@ USB-A to C cables; a hub.
 ## Copying
 - [ ] Copy one photo → identical bytes (`shasum -a 256` vs. a copy made another way), modification date preserved.
 - [ ] Copy a folder tree with empty folders → structure recreated.
-- [ ] Copy the **> 4 GB video** → completes; size matches exactly; progress and ETA sensible throughout; Activity Monitor shows Ferry's memory flat.
+- [ ] Copy the **> 4 GB video** → completes; size matches exactly; progress and ETA sensible throughout; Activity Monitor shows Zapdrop's memory flat.
 - [ ] Copy 1,000+ small files → completes; count matches; speed reasonable.
 - [ ] Case-clash names → second saved as `name (1).ext`; listed under "Saved under a different name".
 - [ ] Duplicates: copy the same folder twice → prompt appears; test Skip, Replace, Keep Both, and "apply to all".
@@ -53,13 +53,13 @@ USB-A to C cables; a hub.
 - [ ] Destination on an external APFS disk and on an exFAT disk.
 
 ## Failure handling
-- [ ] **Cancel** mid-file → no `.ferrypart` left; finished files kept; summary lists the rest as not copied.
+- [ ] **Cancel** mid-file → no `.zapdroppart` left; finished files kept; summary lists the rest as not copied.
 - [ ] **Unplug** mid-transfer → "Phone disconnected"; no partial file; reconnect → **Retry Failed** copies only the remainder.
 - [ ] **Lock the phone** mid-transfer → note the behaviour (varies by brand); Retry recovers.
 - [ ] **Delete a file on the phone** that's queued → reported as "no longer on the phone"; others continue.
 - [ ] **Eject the destination disk** mid-transfer → "Destination not available"; Retry after reconnecting works.
 - [ ] **Nearly full destination** (use a small disk image: `hdiutil create -size 200m -fs APFS -volname Tiny tiny.dmg`) → refused before starting, or stops cleanly mid-way; nothing corrupt.
-- [ ] Destination folder without write permission → "Ferry can't write here".
+- [ ] Destination folder without write permission → "Zapdrop can't write here".
 
 ## Results
 | Date | Mac / macOS | Phone / Android | Build | Pass | Notes / failures (with Console excerpt) |

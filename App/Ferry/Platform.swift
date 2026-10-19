@@ -12,7 +12,7 @@ typealias Model = AppModel<CGImage>
 // MARK: - Logging (local only; file names are marked private so macOS redacts them in logs)
 
 struct OSLogLogger: ApplicationLogger {
-    private let subsystem = Bundle.main.bundleIdentifier ?? "io.github.ferry-mtp.Ferry"
+    private let subsystem = Bundle.main.bundleIdentifier ?? "io.github.zapdrop.Zapdrop"
 
     func log(_ level: LogLevel, _ category: String, _ message: String, privateValue: String?) {
         let logger = Logger(subsystem: subsystem, category: category)
@@ -100,13 +100,14 @@ struct IOKitExclusiveAccessInspector: ExclusiveAccessInspecting {
 // MARK: - Releasing the phone from ptpcamerad (user-initiated only)
 
 struct CameraDaemonReleaser: CameraDaemonReleasing {
-    /// Ends the current user's `ptpcamerad`. macOS starts it again when it is next needed.
+    /// Ends the current user's `ptpcamerad`. macOS starts it again when it is next needed (about a second later
+    /// while a phone is plugged in). It ignores SIGTERM on recent macOS, so it has to be SIGKILL.
     func release() async -> Bool {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-                process.arguments = ["ptpcamerad"]
+                process.arguments = ["-KILL", "ptpcamerad"]
                 process.standardOutput = FileHandle.nullDevice
                 process.standardError = FileHandle.nullDevice
                 do {

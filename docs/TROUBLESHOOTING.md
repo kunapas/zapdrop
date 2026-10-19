@@ -13,7 +13,7 @@ The phone is connected but file sharing is off.
 
 ## "Unlock your phone"
 Android hides storage until it's unlocked. Some phones (Samsung, Xiaomi) also ask **Allow access to phone
-data?** — tap **Allow**. Ferry checks again automatically every couple of seconds.
+data?** — tap **Allow**. Zapdrop checks again automatically every couple of seconds.
 
 ## "Phone is in use by another app"
 Only one program can talk to the phone at a time. Quit any of these, then click **Try Again**:
@@ -22,19 +22,19 @@ Handshaker, Kies.
 
 Still blocked? macOS's background camera service (`ptpcamerad`) often grabs phones automatically.
 Click **Release Phone from macOS Camera Service**. It ends that process for your user account (macOS
-restarts it when needed), and Ferry immediately tries again. Equivalent Terminal command:
-`killall ptpcamerad`. If Photos is set to open when a device connects, turn that off in Image Capture
+restarts it when needed), and Zapdrop immediately tries again. Equivalent Terminal command:
+`killall -9 ptpcamerad` (it ignores a plain `killall`), then click **Try Again** within a second. If Photos is set to open when a device connects, turn that off in Image Capture
 (select the phone → "Connecting this iPhone/device opens: No application").
 
 ## Transfer stopped: "Phone disconnected"
 Files already finished are complete and kept; the unfinished file was deleted. Reconnect, unlock,
-make sure the USB mode is still **File transfer**, then click **Retry Failed**. Ferry finds the remaining
+make sure the USB mode is still **File transfer**, then click **Retry Failed**. Zapdrop finds the remaining
 files again even if the phone renumbered them.
 Tip: some phones drop the connection when the screen locks during long copies. Keep it awake (or increase
 the screen timeout) for big transfers.
 
 ## "Not enough space on your Mac"
-Ferry checks free space before starting (plus a 100 MB safety margin) and before each file. Free up space
+Zapdrop checks free space before starting (plus a 100 MB safety margin) and before each file. Free up space
 or choose a folder on another disk, then **Retry Failed**.
 
 ## "File too large for this phone's USB mode"
@@ -49,9 +49,9 @@ Also check the destination disk: **FAT32** drives can't store files of 4 GB or m
   are replaced with `_`.
 The transfer **Details** list shows every renamed file and its new name.
 
-## Leftover `.ferrypart` files
-These are incomplete copies. Ferry deletes them on cancel or failure; one can be left behind only if the
-Mac lost power or Ferry was force-quit mid-file. They're safe to delete.
+## Leftover `.zapdroppart` files
+These are incomplete copies. Zapdrop deletes them on cancel or failure; one can be left behind only if the
+Mac lost power or Zapdrop was force-quit mid-file. They're safe to delete.
 
 ## Copies are slow
 MTP speed depends mostly on the phone. USB 2 phones typically manage 20–40 MB/s; USB 3 phones more.
@@ -59,6 +59,6 @@ Thousands of tiny files are slower than a few big ones (each file costs several 
 Use a USB 3 port and cable for USB 3 phones.
 
 ## Collecting diagnostics for a bug report
-1. Open Console.app, search for `Ferry`, reproduce the problem, and copy the messages. File names show as
+1. Open Console.app, search for `Zapdrop`, reproduce the problem, and copy the messages. File names show as
    `<private>`; that's intentional.
-2. Include: Mac model, macOS version, phone brand/model, Android version, and the exact message Ferry showed.
+2. Include: Mac model, macOS version, phone brand/model, Android version, and the exact message Zapdrop showed.

@@ -1,6 +1,6 @@
-# Contributing to Ferry
+# Contributing to Zapdrop
 
-Thanks for helping. Ferry aims to be small, reliable, private and free forever.
+Thanks for helping. Zapdrop aims to be small, reliable, private and free forever.
 
 ## Ground rules
 - **No network code, telemetry, analytics, ads, accounts, licence checks or usage limits.** PRs adding any
@@ -25,8 +25,8 @@ any size without using memory).
 - Keep commits small and focused. Explain *why* in the description.
 
 ## Reporting a phone that doesn't work
-Open an issue with: phone brand/model, Android version, Mac model, macOS version, what Ferry showed, and
-Console.app messages filtered to `Ferry` (file names appear as `<private>`).
+Open an issue with: phone brand/model, Android version, Mac model, macOS version, what Zapdrop showed, and
+Console.app messages filtered to `Zapdrop` (file names appear as `<private>`).
 
 ## Security and privacy issues
 Please report privately to the maintainers (GitHub Security Advisories on the repository) rather than in a

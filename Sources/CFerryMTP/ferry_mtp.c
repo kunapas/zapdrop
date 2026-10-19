@@ -1,5 +1,5 @@
 /*
- * ferry_mtp.c — implementation of Ferry's C layer over libmtp (LGPL-2.1+, dynamically linked) and libusb.
+ * ferry_mtp.c — implementation of Zapdrop's C layer over libmtp (LGPL-2.1+, dynamically linked) and libusb.
  * SPDX-License-Identifier: MIT
  */
 #include "ferry_mtp.h"
@@ -137,6 +137,7 @@ int ferry_usb_scan(ferry_usb_device *out, int max) {
         u->address = libusb_get_device_address(list[i]);
         u->vendor_id = desc.idVendor;
         u->product_id = desc.idProduct;
+        u->speed = libusb_get_device_speed(list[i]);
         inspect_interfaces(list[i], u);
     }
     libusb_free_device_list(list, 1);
@@ -267,6 +268,15 @@ void ferry_device_strings(ferry_device *dev, char **manufacturer, char **model, 
     LIBMTP_Clear_Errorstack(dev->mtp); /* missing optional strings are not errors */
 }
 
+int ferry_battery_percent(ferry_device *dev) {
+    uint8_t max = 0, current = 0;
+    int rc = LIBMTP_Get_Batterylevel(dev->mtp, &max, &current);
+    LIBMTP_Clear_Errorstack(dev->mtp); /* unsupported is not an error */
+    if (rc != 0 || max == 0) return -1;
+    int percent = (int)current * 100 / (int)max;
+    return percent > 100 ? 100 : percent;
+}
+
 ferry_status ferry_storages(ferry_device *dev, ferry_storage *out, int max, int *count) {
     *count = 0;
     LIBMTP_Clear_Errorstack(dev->mtp);
@@ -301,18 +311,29 @@ static void fill_object(ferry_object *o, const LIBMTP_file_t *f) {
     o->name = f->filename ? strdup(f->filename) : NULL;
 }
 
-ferry_status ferry_list(ferry_device *dev, uint32_t storage_id, uint32_t parent_id, ferry_object **out, int *count) {
-    *out = NULL;
+ferry_status ferry_list_handles(ferry_device *dev, uint32_t storage_id, uint32_t parent_id, uint32_t **ids, int *count) {
+    *ids = NULL;
     *count = 0;
     LIBMTP_Clear_Errorstack(dev->mtp);
     /* LIBMTP_Get_Files_And_Folders silently drops objects whose metadata fails and reports a failed
      * listing as "empty". List handles explicitly so failures are visible. */
-    uint32_t *ids = NULL;
-    int n = LIBMTP_Get_Children(dev->mtp, storage_id, parent_id, &ids);
-    if (n < 0) { free(ids); return take_errors(dev, FERRY_ERR_GENERAL); }
-    if (n == 0) { free(ids); LIBMTP_Clear_Errorstack(dev->mtp); return FERRY_OK; }
+    uint32_t *found = NULL;
+    int n = LIBMTP_Get_Children(dev->mtp, storage_id, parent_id, &found);
+    if (n < 0) { free(found); return take_errors(dev, FERRY_ERR_GENERAL); }
+    LIBMTP_Clear_Errorstack(dev->mtp);
+    if (n == 0) { free(found); return FERRY_OK; }
+    *ids = found;
+    *count = n;
+    return FERRY_OK;
+}
+
+ferry_status ferry_list_objects(ferry_device *dev, uint32_t storage_id, uint32_t parent_id,
+                                const uint32_t *ids, int n, ferry_object **out, int *count) {
+    *out = NULL;
+    *count = 0;
+    if (n <= 0) return FERRY_OK;
     ferry_object *arr = calloc((size_t)n, sizeof(ferry_object));
-    if (!arr) { free(ids); return FERRY_ERR_NO_MEMORY; }
+    if (!arr) return FERRY_ERR_NO_MEMORY;
     int filled = 0, skipped = 0;
     for (int i = 0; i < n; i++) {
         LIBMTP_Clear_Errorstack(dev->mtp);
@@ -324,7 +345,6 @@ ferry_status ferry_list(ferry_device *dev, uint32_t storage_id, uint32_t parent_
         filled++;
         LIBMTP_destroy_file_t(f);
     }
-    free(ids);
     LIBMTP_Clear_Errorstack(dev->mtp);
     if (skipped > 0) {
         /* Either some objects are malformed, or the phone stopped answering. Ask again to tell which. */
@@ -340,6 +360,18 @@ ferry_status ferry_list(ferry_device *dev, uint32_t storage_id, uint32_t parent_
     *out = arr;
     *count = filled;
     return FERRY_OK;
+}
+
+ferry_status ferry_list(ferry_device *dev, uint32_t storage_id, uint32_t parent_id, ferry_object **out, int *count) {
+    *out = NULL;
+    *count = 0;
+    uint32_t *ids = NULL;
+    int n = 0;
+    ferry_status s = ferry_list_handles(dev, storage_id, parent_id, &ids, &n);
+    if (s != FERRY_OK || n == 0) return s;
+    s = ferry_list_objects(dev, storage_id, parent_id, ids, n, out, count);
+    free(ids);
+    return s;
 }
 
 void ferry_free_objects(ferry_object *objects, int count) {

@@ -1,8 +1,8 @@
 /*
- * ferry_mtp.h — Ferry's small C compatibility layer over libmtp and libusb.
+ * ferry_mtp.h — Zapdrop's small C compatibility layer over libmtp and libusb.
  *
  * This is the only interface the Swift code sees. No libmtp or libusb type crosses it.
- * All functions taking a ferry_device must be called from one thread at a time (Ferry uses one
+ * All functions taking a ferry_device must be called from one thread at a time (Zapdrop uses one
  * serial queue for every call). Strings returned through out-parameters are owned by the caller
  * and must be released with ferry_free().
  *
@@ -51,13 +51,14 @@ typedef struct {
     int has_mtp_interface;   /* PTP still-image class or Android's vendor-specific MTP interface */
     int has_adb_interface;
     int has_excluded_class;  /* HID, mass storage, hub, printer, video — not a phone */
+    int speed;               /* libusb_speed: 0 unknown, 1 low, 2 full, 3 high (USB 2), 4 super (USB 3, 5 Gbps), 5 super+ (10 Gbps) */
 } ferry_usb_device;
 
 /* Fills up to `max` entries. Returns the number found, or -1 on error. */
 int ferry_usb_scan(ferry_usb_device *out, int max);
 
 /* Briefly claims the device's MTP interface to see whether another process holds it.
- * Returns FERRY_OK, FERRY_ERR_BUSY or FERRY_ERR_NO_DEVICE. Do not call while Ferry has a session open. */
+ * Returns FERRY_OK, FERRY_ERR_BUSY or FERRY_ERR_NO_DEVICE. Do not call while Zapdrop has a session open. */
 ferry_status ferry_probe_access(uint32_t bus, uint8_t address);
 
 /* ---- MTP devices ------------------------------------------------------------------------ */
@@ -80,6 +81,9 @@ void ferry_close(ferry_device *dev);
 
 /* Device strings; each may be NULL. Free with ferry_free. */
 void ferry_device_strings(ferry_device *dev, char **manufacturer, char **model, char **friendly_name, char **serial);
+
+/* Battery charge in percent (0–100), or -1 if the phone doesn't report it. One MTP request. */
+int ferry_battery_percent(ferry_device *dev);
 
 typedef struct {
     uint32_t id;
@@ -109,6 +113,15 @@ typedef struct {
 
 /* Lists direct children. Free the result with ferry_free_objects. */
 ferry_status ferry_list(ferry_device *dev, uint32_t storage_id, uint32_t parent_id, ferry_object **out, int *count);
+
+/* The same listing in two steps, so a large folder can be shown in pieces and abandoned between them.
+ * Most phones answer one metadata request per object (Android ~10–50 ms each), which dominates big folders.
+ * ferry_list_handles: one request for the children's handles; free *ids with ferry_free.
+ * ferry_list_objects: metadata for `n` of those handles; storage_id/parent_id are only used to tell a phone
+ * that stopped answering from malformed objects. Free the result with ferry_free_objects. */
+ferry_status ferry_list_handles(ferry_device *dev, uint32_t storage_id, uint32_t parent_id, uint32_t **ids, int *count);
+ferry_status ferry_list_objects(ferry_device *dev, uint32_t storage_id, uint32_t parent_id,
+                                const uint32_t *ids, int n, ferry_object **out, int *count);
 void ferry_free_objects(ferry_object *objects, int count);
 
 /* Fresh metadata for one object. out->name must be freed with ferry_free. */

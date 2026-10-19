@@ -143,12 +143,14 @@ public enum DeviceConnectionState: Equatable, Sendable {
     case ready(DeviceSummary)
     case unsupported(DeviceSummary, reason: String)
     case disconnected(DeviceSummary)
+    /// The user ejected the phone: Zapdrop has let go of it and won't reconnect until asked or it is plugged in again.
+    case ejected(DeviceSummary)
 
     public var device: DeviceSummary? {
         switch self {
         case .noDevice: return nil
         case .chargingOnly(let d), .awaitingAuthorization(let d), .locked(let d), .ready(let d),
-             .disconnected(let d): return d
+             .disconnected(let d), .ejected(let d): return d
         case .busy(let d, _), .unsupported(let d, _): return d
         }
     }

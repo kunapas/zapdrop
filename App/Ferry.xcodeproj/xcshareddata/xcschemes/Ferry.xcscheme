@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "F3A10000000000000000000E"
-               BuildableName = "Ferry.app"
+               BuildableName = "Zapdrop.app"
                BlueprintName = "Ferry"
                ReferencedContainer = "container:Ferry.xcodeproj">
             </BuildableReference>
@@ -43,7 +43,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "F3A10000000000000000000E"
-            BuildableName = "Ferry.app"
+            BuildableName = "Zapdrop.app"
             BlueprintName = "Ferry"
             ReferencedContainer = "container:Ferry.xcodeproj">
          </BuildableReference>

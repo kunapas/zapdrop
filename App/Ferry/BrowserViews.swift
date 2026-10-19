@@ -1,4 +1,5 @@
 import AppKit
+import QuickLook
 import SwiftUI
 import FerryAppModel
 import FerryCore
@@ -14,10 +15,11 @@ struct BrowserContainer: View {
                 case .list: FileTable(model: model, browser: model.browser)
                 case .grid: FileGrid(model: model, browser: model.browser)
                 }
-                if model.browser.isLoading {
+                // Large folders fill in piece by piece; only cover the list while nothing has arrived yet.
+                if model.browser.isLoading && model.browser.items.isEmpty {
                     ProgressView("Reading folder…")
-                        .padding()
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .padding(18)
+                        .glassPanel(cornerRadius: 14)
                 } else if let error = model.browser.error {
                     ContentUnavailableView {
                         Label(error.title, systemImage: "exclamationmark.triangle")
@@ -26,26 +28,147 @@ struct BrowserContainer: View {
                     } actions: {
                         Button("Try Again") { model.browser.reload() }
                     }
-                } else if model.browser.items.isEmpty {
-                    ContentUnavailableView(model.browser.searchText.isEmpty ? "Empty Folder" : "No Matches",
-                                           systemImage: "folder")
+                } else if let reason = model.browser.emptyReason {
+                    EmptyFolderView(model: model, reason: reason)
+                }
+                if let item = model.preview.preparing {
+                    PreviewProgress(model: model, item: item)
                 }
             }
             Divider()
-            HStack {
-                Text(model.browser.statusText)
+            HStack(spacing: 12) {
+                Text(model.browser.statusText).lineLimit(1)
                 Spacer()
+                TipsButton(model: model)
                 if let dest = model.destination.destination {
-                    Text("Saving to \(dest.lastPathComponent)").foregroundStyle(.secondary)
+                    Text("Saving to \(dest.lastPathComponent)").foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             .font(.callout)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-            .accessibilityElement(children: .combine)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial)
+            .accessibilityElement(children: .contain)
         }
         .searchable(text: Binding(get: { model.browser.searchText }, set: { model.browser.searchText = $0 }),
                     placement: .toolbar, prompt: "Search this folder")
+        .quickLookPreview(Binding(get: { model.preview.url }, set: { model.preview.url = $0 }))
+        .onChange(of: model.preview.error) { _, error in
+            if let error { model.notice = error; model.preview.clearError() }
+        }
+    }
+}
+
+/// Shown while a file is copied from the phone so Quick Look can open it.
+struct PreviewProgress: View {
+    let model: Model
+    let item: RemoteItem
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text("Preparing preview of \(item.displayName)…").lineLimit(1).truncationMode(.middle)
+            if item.size != nil {
+                ProgressView(value: model.preview.fraction).frame(width: 220)
+            } else {
+                ProgressView().controlSize(.small)
+            }
+            Button("Cancel") { model.preview.close() }
+                .keyboardShortcut(.cancelAction)
+        }
+        .padding(18)
+        .frame(maxWidth: 320)
+        .glassPanel(cornerRadius: 14)
+        .accessibilityElement(children: .contain)
+    }
+}
+
+/// Explains an empty list: an empty folder, or a filter or search hiding what's there (with a way back).
+struct EmptyFolderView: View {
+    let model: Model
+    let reason: DirectoryBrowserViewModel.EmptyReason
+
+    var body: some View {
+        switch reason {
+        case .emptyFolder:
+            ContentUnavailableView("Empty Folder", systemImage: "folder")
+        case .noMatches(let query):
+            ContentUnavailableView.search(text: query)
+        case .filtered(let filter):
+            ContentUnavailableView {
+                Label("No \(filter.title) Here", systemImage: "line.3.horizontal.decrease.circle")
+            } description: {
+                Text("This folder has files, just none of this kind.")
+            } actions: {
+                Button("Show All Files") { model.browser.filter = .all }
+            }
+        }
+    }
+}
+
+/// "💡 2 ways to free space" in the status bar, shown only for folders where a tip applies. The popover explains
+/// each one and can select its files, ready to copy to the Mac before deleting them on the phone.
+struct TipsButton: View {
+    let model: Model
+    @State private var showing = false
+
+    var body: some View {
+        let tips = model.browser.folderTips
+        if !tips.isEmpty {
+            Button {
+                showing.toggle()
+            } label: {
+                Label(tips.count == 1 ? "1 way to free space" : "\(tips.count) ways to free space", systemImage: "lightbulb.max")
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .glassPanel(cornerRadius: 11, tint: .yellow.opacity(0.22))
+            }
+            .buttonStyle(.plain)
+            .help("Ways to free space on your phone, based on this folder")
+            .popover(isPresented: $showing, arrowEdge: .top) {
+                TipsPopover(model: model, tips: tips) { showing = false }
+            }
+        }
+    }
+}
+
+private struct TipsPopover: View {
+    let model: Model
+    let tips: [SpaceTip]
+    let close: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Free up space on your phone").font(.headline)
+                Text("Zapdrop only reads your phone. Copy these files to your Mac first, then delete them on the phone.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            ForEach(tips) { tip in
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: TipStyle.symbol(tip.kind))
+                        .font(.title3)
+                        .foregroundStyle(Brand.gradient)
+                        .frame(width: 26)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(tip.title).fontWeight(.semibold)
+                        Text(tip.detail)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button(tip.fileCount == 1 ? "Select This File" : "Select \(tip.fileCount) Files") {
+                            model.browser.select(tip)
+                            close()
+                        }
+                        .controlSize(.small)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .frame(width: 380)
     }
 }
 
@@ -57,10 +180,10 @@ struct FileTable: View {
     @State private var sortOrder = [KeyPathComparator(\RemoteItem.name)]
 
     var body: some View {
-        Table(browser.items, selection: $browser.selection, sortOrder: $sortOrder) {
+        Table(of: RemoteItem.self, selection: $browser.selection, sortOrder: $sortOrder) {
             TableColumn("Name", value: \.name) { item in
                 HStack(spacing: 8) {
-                    ThumbnailView(model: model, item: item, size: 22)
+                    ThumbnailView(model: model, item: item, size: 20)
                     Text(item.displayName).lineLimit(1).truncationMode(.middle)
                 }
                 .accessibilityElement(children: .ignore)
@@ -79,16 +202,32 @@ struct FileTable: View {
                 Text(item.kindDescription).foregroundStyle(.secondary)
             }
             .width(min: 90, ideal: 130)
+        } rows: {
+            ForEach(browser.items) { item in
+                // Drag rows into Finder to copy them there (all selected rows travel together).
+                TableRow(item).itemProvider { FinderDrag.provider(for: item, model: model) }
+            }
         }
         .contextMenu(forSelectionType: ObjectID.self) { ids in
             if !ids.isEmpty {
-                Button("Copy to Mac") { model.copySelection(items(ids)) }
-                if ids.count == 1, let item = items(ids).first, item.isFolder {
-                    Button("Open") { browser.open(item) }
+                if ids.count == 1, let item = items(ids).first {
+                    if item.isFolder {
+                        Button("Open") { browser.open(item) }
+                    } else {
+                        Button("Quick Look") { model.preview.show(item) }
+                    }
+                    Divider()
                 }
+                Button("Copy to Mac") { model.copySelection(items(ids)) }
             }
         } primaryAction: { ids in
             if ids.count == 1, let item = items(ids).first, item.isFolder { browser.open(item) }
+        }
+        .scrollContentBackground(.hidden)
+        .alternatingRowBackgrounds(.disabled)
+        .onKeyPress(.space) {
+            model.togglePreview()
+            return .handled
         }
         .onAppear {
             // The column header starts at Name ↑; keep the rows in step with it.
@@ -123,7 +262,7 @@ func accessibilityText(_ item: RemoteItem) -> String {
 struct FileGrid: View {
     let model: Model
     @Bindable var browser: DirectoryBrowserViewModel
-    private let columns = [GridItem(.adaptive(minimum: 128, maximum: 180), spacing: 12)]
+    private let columns = [GridItem(.adaptive(minimum: 132, maximum: 180), spacing: 14)]
 
     var body: some View {
         ScrollView {
@@ -132,13 +271,32 @@ struct FileGrid: View {
                     GridCell(model: model, item: item, isSelected: browser.selection.contains(item.id))
                         .onTapGesture(count: 2) { if item.isFolder { browser.open(item) } }
                         .onTapGesture { select(item) }
+                        .onDrag { FinderDrag.provider(for: item, model: model) ?? NSItemProvider() }
+                        .contextMenu {
+                            if item.isFolder {
+                                Button("Open") { browser.open(item) }
+                            } else {
+                                Button("Quick Look") { model.preview.show(item) }
+                            }
+                            Divider()
+                            Button("Copy to Mac") {
+                                model.copySelection(browser.selection.contains(item.id) ? browser.selectedItems : [item])
+                            }
+                        }
                         .accessibilityAddTraits(.isButton)
                         .accessibilityAction(named: item.isFolder ? "Open" : "Select") {
                             if item.isFolder { browser.open(item) } else { select(item) }
                         }
                 }
             }
-            .padding(14)
+            .padding(16)
+        }
+        .scrollContentBackground(.hidden)
+        .focusable()
+        .focusEffectDisabled()
+        .onKeyPress(.space) {
+            model.togglePreview()
+            return .handled
         }
     }
 
@@ -158,17 +316,24 @@ struct GridCell: View {
     let isSelected: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 7) {
             ThumbnailView(model: model, item: item, size: 104)
-                .frame(width: 112, height: 112)
-                .background(isSelected ? Color.accentColor.opacity(0.18) : .clear, in: RoundedRectangle(cornerRadius: 8))
+                .frame(width: 116, height: 116)
+                .shadow(color: .black.opacity(model.thumbnails.image(for: item) == nil ? 0 : 0.18), radius: 6, y: 3)
+                .background(isSelected ? Color.accentColor.opacity(0.16) : .clear,
+                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2)
+                }
             Text(item.displayName)
                 .font(.caption)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .truncationMode(.middle)
-                .padding(.horizontal, 4)
-                .background(isSelected ? Color.accentColor : .clear, in: RoundedRectangle(cornerRadius: 4))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 1)
+                .background(isSelected ? Color.accentColor : .clear, in: Capsule())
                 .foregroundStyle(isSelected ? Color.white : Color.primary)
         }
         .contentShape(Rectangle())
@@ -190,13 +355,13 @@ struct ThumbnailView: View {
                 Image(decorative: image, scale: 1)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: size > 40 ? 6 : 3))
+                    .clipShape(RoundedRectangle(cornerRadius: size > 40 ? 10 : 3, style: .continuous))
             } else {
-                Image(systemName: item.kind.symbolName)
+                Image(nsImage: FileIcons.image(for: item))
                     .resizable()
+                    .interpolation(.high)
                     .aspectRatio(contentMode: .fit)
-                    .padding(size > 40 ? size * 0.22 : 2)
-                    .foregroundStyle(item.isFolder ? Color.accentColor : Color.secondary)
+                    .padding(size > 40 ? size * 0.06 : 0)
             }
         }
         .frame(width: size, height: size)

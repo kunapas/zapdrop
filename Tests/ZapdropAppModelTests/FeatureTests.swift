@@ -116,7 +116,9 @@ final class FinderDragTests: XCTestCase {
         let file = try XCTUnwrap(model.browser.items.first { $0.name.hasPrefix("Budget") })
         let url = try await model.exportForDrag(file)
         XCTAssertEqual(url.lastPathComponent, "Budget 2026.xlsx")
-        XCTAssertTrue(url.path.hasPrefix(cache.path), "staged privately; Finder copies it from there")
+        // macOS's temporary folder is reached through a symlink (/var → /private/var); compare the real paths.
+        XCTAssertTrue(url.resolvingSymlinksInPath().path.hasPrefix(cache.resolvingSymlinksInPath().path),
+                      "staged privately; Finder copies it from there")
         XCTAssertEqual(LocalFS.fileSize(of: url), file.size)
         XCTAssertEqual(model.transfers.rows.count, 1, "shown in the Transfers panel like any copy")
 

@@ -30,7 +30,8 @@ lipo -create "${binaries[@]}" -output "$APP/Contents/MacOS/$APP_NAME"
 # Drop the development rpath to Vendor/ so the shipped app only looks inside its own bundle.
 install_name_tool -delete_rpath "$DEPS_PREFIX/lib" "$APP/Contents/MacOS/$APP_NAME" 2>/dev/null || true
 # …and make sure it's gone: a path into this machine's checkout must never ship.
-if otool -l "$APP/Contents/MacOS/$APP_NAME" | awk '/LC_RPATH/{getline; getline; print $2}' | grep -qv '^@executable_path/'; then
+# Paths relative to the app (@executable_path, @loader_path) are fine; an absolute one is not.
+if otool -l "$APP/Contents/MacOS/$APP_NAME" | awk '/LC_RPATH/{getline; getline; print $2}' | grep -qv '^@'; then
   echo "error: the app still has a build-machine library path (LC_RPATH):" >&2
   otool -l "$APP/Contents/MacOS/$APP_NAME" | awk '/LC_RPATH/{getline; getline; print "  " $2}' >&2
   exit 1

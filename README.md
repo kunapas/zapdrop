@@ -19,7 +19,7 @@ Free, open source, private, and with no artificial limits.
 1. Open Zapdrop and connect your phone with a USB cable that supports data.
 2. Unlock the phone, swipe down, tap the USB notification and choose **File transfer**
    (sometimes "File Transfer / Android Auto" or "MTP").
-3. Pick a storage area (Internal storage, SD card) in the sidebar and browse like Finder.
+3. Pick a storage area (Internal storage, SD card) at the top of the window and browse like Finder.
 4. Select files or folders, choose **Save To → Choose…**, then **Copy to Mac** (⇧⌘C).
 5. Watch progress, speed and time remaining at the bottom. Cancel any time; finished files are kept.
 6. If something fails, use **Retry Failed** — only the failed files are copied again.

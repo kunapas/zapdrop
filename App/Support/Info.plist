@@ -6,6 +6,12 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>Zapdrop</string>
+	<!-- Files copied from a phone are marked as downloaded, so macOS checks apps and installers among them on first
+	     open (a sandboxed build gets this automatically). -->
+	<key>LSFileQuarantineEnabled</key>
+	<true/>
+	<key>ZapdropSupportURL</key>
+	<string>$(ZAPDROP_SUPPORT_URL)</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleExecutable</key>

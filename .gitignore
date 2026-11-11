@@ -8,3 +8,8 @@ xcuserdata/
 DerivedData/
 .DS_Store
 *.zapdroppart
+# Never commit signing material.
+*.p12
+*.cer
+*.provisionprofile
+.env

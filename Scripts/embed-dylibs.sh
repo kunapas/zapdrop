@@ -9,8 +9,8 @@ APP="${1:-${TARGET_BUILD_DIR:-}/${WRAPPER_NAME:-}}"
 IDENTITY="${2:-${EXPANDED_CODE_SIGN_IDENTITY:--}}"
 [[ -n "$IDENTITY" ]] || IDENTITY="-"
 
-if [[ "${FERRY_MOCK_ONLY:-0}" == "1" ]]; then
-  echo "FERRY_MOCK_ONLY=1: not embedding libmtp/libusb (demo build)."
+if [[ "${ZAPDROP_MOCK_ONLY:-0}" == "1" ]]; then
+  echo "ZAPDROP_MOCK_ONLY=1: not embedding libmtp/libusb (demo build)."
   exit 0
 fi
 for lib in "$LIBUSB_DYLIB" "$LIBMTP_DYLIB"; do
@@ -28,7 +28,10 @@ mkdir -p "$FW" "$APP/Contents/Resources/Licenses"
 for lib in "$LIBUSB_DYLIB" "$LIBMTP_DYLIB"; do
   cp -f "$DEPS_PREFIX/lib/$lib" "$FW/$lib"
   chmod 755 "$FW/$lib"
-  codesign --force --timestamp=none ${runtime[@]+"${runtime[@]}"} --sign "$IDENTITY" "$FW/$lib" >/dev/null
+  # Notarisation needs a secure timestamp; ad-hoc builds have no identity to timestamp.
+  timestamp=--timestamp
+  [[ "$IDENTITY" == "-" ]] && timestamp=--timestamp=none
+  codesign --force "$timestamp" ${runtime[@]+"${runtime[@]}"} --sign "$IDENTITY" "$FW/$lib" >/dev/null
 done
 # Licence texts and the source offer travel inside the app (LGPL obligations; see THIRD_PARTY_NOTICES.md).
 cp -f "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$ROOT_DIR/LICENSE" "$APP/Contents/Resources/Licenses/" 2>/dev/null || true

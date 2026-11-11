@@ -48,9 +48,9 @@ the UI or transfer engine.
 
 - **`ptpcamerad` / Image Capture contention.** On connect, macOS's camera daemon (and apps like Photos,
   Image Capture, Android File Transfer, Samsung Smart Switch, OpenMTP) may claim the phone's USB interface.
-  Only one program can use it at a time. Zapdrop detects this, names the likely holder, and offers a
-  user-initiated "Release phone from macOS camera service" button (it ends the user's own `ptpcamerad`
-  process, which macOS restarts later). This is why Zapdrop is **not sandboxed** in v1 (see Decisions).
+  Only one program can use it at a time. Zapdrop detects this and names the likely holder. It takes
+  the phone back from macOS's `ptpcamerad` automatically (ending the user's own process, which macOS restarts later),
+  and quits other apps only with the user's OK ("Free Up Phone & Connect"). This is why Zapdrop is **not sandboxed** in v1 (see Decisions).
 - **MTP is one-request-at-a-time.** Zapdrop runs one device operation at a time. Parallel copies would not be faster
   and break some phones.
 - **No source checksums.** Android's MTP server does not expose file hashes. Zapdrop verifies byte counts and can

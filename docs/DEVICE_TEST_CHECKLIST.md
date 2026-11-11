@@ -28,8 +28,10 @@ USB-A to C cables; a hub.
 - [ ] Data cable, phone in **Charging only / No data transfer** → "is only charging".
 - [ ] Phone **locked** while switching to File transfer → "Unlock …"; unlocking → browser appears within ~3 s.
 - [ ] Samsung "Allow access to phone data?" prompt → waiting state; tap Allow → ready.
-- [ ] Open **Image Capture** first so it grabs the phone → "in use by another app" naming it; quitting it + Try Again → ready.
-- [ ] `ptpcamerad` holding the phone → **Release Phone from macOS Camera Service** → ready.
+- [ ] Plug in with nothing else open → `ptpcamerad` grabs it → "Connecting…" → ready (or Allow access), no click needed.
+- [ ] Tap **Allow** on the phone → it reconnects → Zapdrop takes it back from `ptpcamerad` again without a click.
+- [ ] Open **Image Capture** first so it grabs the phone → screen names it → **Free Up Phone & Connect** quits it → ready.
+- [ ] Tick **Always do this automatically**, replug with Image Capture open → connects without asking.
 - [ ] Two phones connected → both listed; switching between them works.
 
 ## Browsing

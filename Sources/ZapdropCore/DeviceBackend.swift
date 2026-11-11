@@ -1,0 +1,154 @@
+import Foundation
+
+/// What a USB scan found, before any session is opened.
+public struct DiscoveredDevice: Hashable, Sendable, Identifiable {
+    public enum Mode: Hashable, Sendable {
+        /// The phone exposes an MTP (or PTP) interface — file transfer is switched on.
+        case fileTransfer
+        /// A known phone vendor with no file-transfer interface: probably "Charging only" / "No data transfer".
+        case chargingOnly
+    }
+    public var summary: DeviceSummary
+    public var mode: Mode
+    /// Negotiated USB link speed, when the scan could tell.
+    public var usbSpeed: USBSpeed?
+    public var id: DeviceID { summary.id }
+
+    public init(summary: DeviceSummary, mode: Mode, usbSpeed: USBSpeed? = nil) {
+        self.summary = summary
+        self.mode = mode
+        self.usbSpeed = usbSpeed
+    }
+}
+
+/// The USB link the phone negotiated. A USB-C cable or port can still run at USB 2 speed, which explains slow copies.
+public enum USBSpeed: Int, Hashable, Sendable {
+    case low = 1, full, high, superSpeed, superSpeedPlus
+
+    public var displayName: String {
+        switch self {
+        case .low: return "USB 1.0 (1.5 Mbit/s)"
+        case .full: return "USB 1.1 (12 Mbit/s)"
+        case .high: return "USB 2 (480 Mbit/s)"
+        case .superSpeed: return "USB 3 (5 Gbit/s)"
+        case .superSpeedPlus: return "USB 3 (10 Gbit/s)"
+        }
+    }
+
+    /// "USB 2", "USB 3" — for tight spaces; `displayName` has the speed.
+    public var shortName: String {
+        switch self {
+        case .low, .full: return "USB 1"
+        case .high: return "USB 2"
+        case .superSpeed: return "USB 3"
+        case .superSpeedPlus: return "USB 3 (10 Gb)"
+        }
+    }
+
+    /// Below USB 3: copies are limited to roughly 20–40 MB/s whatever the phone can do.
+    public var isSlow: Bool { rawValue < USBSpeed.superSpeed.rawValue }
+}
+
+/// Receives file data as it arrives from the phone. Called serially, never concurrently.
+/// Implementations must not retain the buffer beyond the call.
+public protocol ByteSink: AnyObject {
+    func write(_ bytes: UnsafeRawBufferPointer) throws
+}
+
+/// Supplies the bytes of a file being sent to the phone. Called serially.
+public protocol ByteSource: AnyObject {
+    /// Fills `buffer` from the start and returns how many bytes it wrote; 0 only at the end of the data.
+    func read(into buffer: UnsafeMutableRawBufferPointer) throws -> Int
+}
+
+/// Entry point to a family of devices (real libmtp, or the mock).
+public protocol DeviceBackend: Sendable {
+    /// Cheap scan; must not disturb an open session or an active transfer.
+    func discover() async throws -> [DiscoveredDevice]
+    /// Opens an MTP session. Throws `ZapdropError.deviceBusy`, `.notAuthorized`, `.deviceDisconnected`, …
+    func openSession(_ id: DeviceID) async throws -> any DeviceSession
+}
+
+/// An open MTP session with one phone. Implementations serialise all device I/O internally.
+public protocol DeviceSession: AnyObject, Sendable {
+    var summary: DeviceSummary { get }
+
+    /// Storage areas. An empty list usually means the phone is locked or awaiting "Allow access".
+    func storages() async throws -> [StorageInfo]
+
+    /// Direct children of a folder (lazy, one level).
+    func children(of location: RemoteLocation) async throws -> [RemoteItem]
+
+    /// The same listing delivered in pieces of about `batchSize` items as they are read, so a large folder can
+    /// be shown before it is complete. `onBatch` receives each new piece and the folder's total item count.
+    /// Honours task cancellation between pieces by throwing `ZapdropError.cancelled`.
+    func children(of location: RemoteLocation, batchSize: Int,
+                  onBatch: @escaping @Sendable (_ batch: [RemoteItem], _ total: Int) async -> Void) async throws -> [RemoteItem]
+
+    /// Streams one file into `sink` in bounded chunks. Returns the number of bytes delivered.
+    /// `progress` receives the cumulative byte count. Honours task cancellation by throwing `ZapdropError.cancelled`.
+    func download(_ item: RemoteItem, into sink: ByteSink,
+                  progress: @escaping @Sendable (UInt64) -> Void) async throws -> UInt64
+
+    /// A small preview image supplied by the phone, if it has one. Returns `nil` when unsupported.
+    func thumbnail(for item: RemoteItem) async throws -> Data?
+
+    /// Metadata for one object, or nil if it no longer exists. Note: libmtp caches names and dates for the
+    /// whole session (sizes are re-read), so a rename on the phone may only show after reconnecting.
+    func refreshItem(_ item: RemoteItem) async throws -> RemoteItem?
+
+    /// Battery charge in percent, or nil if the phone doesn't report it.
+    func batteryPercent() async -> Int?
+
+    // Sending to the phone. These two only ever add: nothing on the phone is overwritten or deleted.
+
+    /// Creates a folder and returns it.
+    func createFolder(named name: String, in location: RemoteLocation) async throws -> RemoteItem
+
+    /// Sends one new file of exactly `size` bytes from `source` into a folder and returns it. The caller picks a
+    /// name that isn't taken. `progress` receives the cumulative byte count. Honours task cancellation.
+    func upload(named name: String, size: UInt64, to location: RemoteLocation, from source: ByteSource,
+                progress: @escaping @Sendable (UInt64) -> Void) async throws -> RemoteItem
+
+    func close() async
+}
+
+public extension DeviceSession {
+    /// Battery charge in percent, or nil if the phone doesn't say. Default: unknown.
+    func batteryPercent() async -> Int? { nil }
+
+    /// Sessions that can't send to the phone say so.
+    func createFolder(named name: String, in location: RemoteLocation) async throws -> RemoteItem {
+        throw ZapdropError.unsupportedDevice(detail: "creating folders")
+    }
+
+    func upload(named name: String, size: UInt64, to location: RemoteLocation, from source: ByteSource,
+                progress: @escaping @Sendable (UInt64) -> Void) async throws -> RemoteItem {
+        throw ZapdropError.unsupportedDevice(detail: "sending files")
+    }
+
+    /// Sessions that can't list in pieces deliver the whole folder as one piece.
+    func children(of location: RemoteLocation, batchSize: Int,
+                  onBatch: @escaping @Sendable (_ batch: [RemoteItem], _ total: Int) async -> Void) async throws -> [RemoteItem] {
+        let all = try await children(of: location)
+        await onBatch(all, all.count)
+        return all
+    }
+}
+
+/// USB vendor IDs of Android phone makers, used only to recognise a phone in "charging only" mode.
+public enum KnownPhoneVendors {
+    public static let names: [UInt16: String] = [
+        0x18D1: "Google", 0x04E8: "Samsung", 0x22B8: "Motorola", 0x1004: "LG", 0x0BB4: "HTC",
+        0x0FCE: "Sony", 0x12D1: "Huawei", 0x339B: "Honor", 0x2717: "Xiaomi", 0x2A70: "OnePlus",
+        0x22D9: "OPPO", 0x2D95: "vivo", 0x0B05: "ASUS", 0x17EF: "Lenovo", 0x19D2: "ZTE",
+        0x2E04: "Nokia", 0x2AE5: "Fairphone", 0x2A45: "Meizu", 0x1BBB: "TCL", 0x1949: "Amazon",
+        0x04DD: "Sharp", 0x0482: "Kyocera", 0x2E17: "Essential", 0x05C6: "Qualcomm",
+        0x0E8D: "MediaTek", 0x1EBF: "Coolpad",
+    ]
+    // Deliberately excluded: vendors whose IDs mostly belong to non-phones (Intel, Dell, HP, NVIDIA…).
+    // Add entries only from a verifiable source (Android OEM USB driver list or the vendor's own docs).
+
+    public static func name(for vendorID: UInt16) -> String? { names[vendorID] }
+    public static func isPhoneVendor(_ vendorID: UInt16) -> Bool { names[vendorID] != nil }
+}

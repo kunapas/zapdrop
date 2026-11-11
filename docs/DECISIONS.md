@@ -4,17 +4,17 @@ Short records of decisions that shape the code. Newest last.
 
 ## D1 — Name: "Zapdrop" (formerly "Ferry")
 The app started as "Ferry" (short for moving things across; "OpenMTP Mac" was too close to OpenMTP). Before
-publishing it was renamed **Zapdrop**: distinctive, quick to say, and with no existing app or trademark found under
-that exact name (Oct 2026 web and App Store search). Names were rejected for: Apple marks ("Air…", "Mac" with a
-generic word — Apple's trademark guidelines), Google marks ("Android", "Andro…", "Droid"), and existing apps or
-software marks. Nearby but distinct: Zapya and Snapdrop (file-sharing tools). A formal USPTO/EUIPO class 9 search and
-reserving the name in App Store Connect are still to do.
+publishing it was renamed **Zapdrop** — app, bundle, Xcode project, Swift modules (`ZapdropCore`, …), the C layer
+(`zapdrop_*`, `ZAPDROP_*`) and developer switches — so the open-source repository reads consistently. No existing app
+or trademark was found under that exact name (Oct 2026 web and App Store search). Names were rejected for: Apple
+marks ("Air…", "Mac" with a generic word — Apple's trademark guidelines), Google marks ("Android", "Andro…", "Droid"),
+and existing apps or software marks. Nearby but distinct: Zapya and Snapdrop (file-sharing tools). A formal
+USPTO/EUIPO class 9 search and reserving the name in App Store Connect are still to do.
 The user-facing name lives in `Scripts/config.sh` (`APP_NAME`, `BUNDLE_ID`), the Xcode project's `PRODUCT_NAME`,
-`App/Support/Info.plist` and UI text. Internal code names keep "Ferry" (`FerryCore`, `CFerryMTP`, `ferry_*`,
-`FERRY_*` switches, the `App/Ferry` folder and Xcode target) — renaming them would change nothing users see.
+`App/Support/Info.plist` and UI text.
 
 ## D2 — Device layer: libmtp 1.1.23 + libusb 1.0.29, dynamically linked
-See `FEASIBILITY.md`. Wrapped by a tiny C shim (`Sources/CFerryMTP`) and a Swift backend (`Sources/FerryLibMTP`).
+See `FEASIBILITY.md`. Wrapped by a tiny C shim (`Sources/CZapdropMTP`) and a Swift backend (`Sources/ZapdropLibMTP`).
 Nothing else imports libmtp. The rest of the app talks to the `DeviceBackend` protocol.
 
 ## D3 — One serial device queue
@@ -32,11 +32,11 @@ security updates from Apple, so the trade-off is small. Reverting to 13 means sw
 libusb does work under the App Sandbox with `com.apple.security.device.usb`, but a sandboxed app cannot end
 `ptpcamerad`, which is the most common reason a phone "doesn't show up". v1 ships outside the Mac App Store,
 signed with Developer ID, Hardened Runtime on, notarised, no network entitlements used. A sandboxed build
-(`Ferry-Sandboxed.entitlements`) is kept for experimentation and must be verified on real hardware before use.
+(`Zapdrop-Sandboxed.entitlements`) is kept for experimentation and must be verified on real hardware before use.
 
 ## D6 — Swift Package is the source of truth; Xcode project is a thin shell
 All code lives in a Swift package. The app can be built with only the Command Line Tools
-(`Scripts/build-app.sh`) or opened in Xcode (`App/Ferry.xcodeproj`, which references the package).
+(`Scripts/build-app.sh`) or opened in Xcode (`App/Zapdrop.xcodeproj`, which references the package).
 macOS-only targets are added to `Package.swift` only when building on macOS.
 
 ## D7 — Partial files next to the destination, then atomic rename

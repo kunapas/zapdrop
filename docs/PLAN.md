@@ -28,7 +28,7 @@
 
 ## Post-MVP (deliberately not in v1)
 
-- Copy Mac → phone, delete/rename on phone (only after read-only flows are proven).
+- Delete/rename on phone (copying Mac → phone is built; it only adds, never overwrites).
 - Drag from Zapdrop to Finder (needs file promises that survive multi-minute MTP reads; not reliable enough yet).
 - Video thumbnails, resuming partially downloaded files (`GetPartialObject64`), parallel devices.
 - Swap to mtp-rs or a native Swift MTP stack if libmtp proves limiting.

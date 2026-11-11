@@ -19,8 +19,8 @@ cp "$VENDOR_BUILD"/licenses/*.txt "$VENDOR_BUILD/SOURCES.txt" "$STAGE/Licenses/"
 
 rm -f "$DMG"
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
-if [[ -n "${FERRY_SIGN_IDENTITY:-}" && "${FERRY_SIGN_IDENTITY}" != "-" ]]; then
-  codesign --force --timestamp --sign "$FERRY_SIGN_IDENTITY" "$DMG"
+if [[ -n "${ZAPDROP_SIGN_IDENTITY:-}" && "${ZAPDROP_SIGN_IDENTITY}" != "-" ]]; then
+  codesign --force --timestamp --sign "$ZAPDROP_SIGN_IDENTITY" "$DMG"
 fi
 shasum -a 256 "$DMG" | tee "$DMG.sha256"
 echo "Created $DMG"

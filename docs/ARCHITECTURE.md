@@ -4,47 +4,47 @@
 
 ```
 ┌──────────────────────────────── App (macOS only, SwiftUI) ─────────────────────────────────┐
-│ FerryApp: windows, Table/grid browser, transfer panel, duplicate sheet, settings,           │
+│ ZapdropApp: windows, Table/grid browser, transfer panel, duplicate sheet, settings,           │
 │ ThumbnailRenderer (ImageIO), ExclusiveAccessInspector (IOKit), CameraDaemonReleaser         │
 └───────────────────────────────▲─────────────────────────────────────────────────────────────┘
                                 │ observes (@Observable, main actor)
-┌───────────────────────────────┴──────── FerryAppModel (cross-platform, unit-tested) ─────────┐
+┌───────────────────────────────┴──────── ZapdropAppModel (cross-platform, unit-tested) ─────────┐
 │ DeviceMonitor · DirectoryBrowserViewModel · TransferQueueViewModel · ThumbnailService       │
 │ LocalDestinationService · DuplicatePromptCoordinator                                         │
 └───────────────────────────────▲─────────────────────────────────────────────────────────────┘
                                 │ async/await
-┌───────────────────────────────┴──────────── FerryCore (cross-platform, unit-tested) ─────────┐
+┌───────────────────────────────┴──────────── ZapdropCore (cross-platform, unit-tested) ─────────┐
 │ Models (64-bit sizes) · DeviceBackend / DeviceSession protocols · ErrorMapper · Logger       │
 │ TransferPlanner · TransferOperation · TransferCoordinator · DuplicateResolutionService       │
 │ LocalFileWriter (partial file, fsync, atomic rename) · FileNameSanitizer · SafePath          │
 │ SpeedEstimator · ByteFormatter · SHA256 · VolumeSpaceProvider                               │
 └──────────────▲───────────────────────────────────────────────────▲───────────────────────────┘
                │ implements DeviceBackend                          │ implements DeviceBackend
-┌──────────────┴───────────── FerryLibMTP ───────────┐   ┌─────────┴──────── FerryMock ───────────┐
+┌──────────────┴───────────── ZapdropLibMTP ───────────┐   ┌─────────┴──────── ZapdropMock ───────────┐
 │ LibMTPBackend · LibMTPSession                       │   │ Scripted phones, storages, folder trees │
 │ DeviceQueue (one serial queue for every libmtp call)│   │ Virtual files of any size (no memory)  │
 └──────────────▲─────────────────────────────────────┘   │ Fault injection: disconnect, busy, lock │
-┌──────────────┴───── CFerryMTP (C shim, ~300 lines) ─┐   └─────────────────────────────────────────┘
-│ ferry_mtp_* functions; only file including libmtp.h │
+┌──────────────┴───── CZapdropMTP (C shim, ~300 lines) ─┐   └─────────────────────────────────────────┘
+│ zapdrop_mtp_* functions; only file including libmtp.h │
 └──────────────▲─────────────────────────────────────┘
           libmtp.dylib → libusb-1.0.dylib  (bundled in Zapdrop.app/Contents/Frameworks)
 ```
 
-Rule: only `CFerryMTP` includes libmtp headers; only `FerryLibMTP` imports `CFerryMTP`. Swap the backend
+Rule: only `CZapdropMTP` includes libmtp headers; only `ZapdropLibMTP` imports `CZapdropMTP`. Swap the backend
 without touching anything above it.
 
 ## Directory layout
 
 ```
 Package.swift                 Swift package (source of truth)
-Sources/FerryCore/            engine, models, protocols
-Sources/FerryMock/            mock phone backend
-Sources/CFerryMTP/            C shim over libmtp/libusb
-Sources/FerryLibMTP/          real backend
-Sources/FerryAppModel/        view models and services (no SwiftUI)
-App/Ferry/                    SwiftUI app sources (macOS only)
+Sources/ZapdropCore/            engine, models, protocols
+Sources/ZapdropMock/            mock phone backend
+Sources/CZapdropMTP/            C shim over libmtp/libusb
+Sources/ZapdropLibMTP/          real backend
+Sources/ZapdropAppModel/        view models and services (no SwiftUI)
+App/Zapdrop/                    SwiftUI app sources (macOS only)
 App/Support/                  Info.plist, entitlements
-App/Ferry.xcodeproj           Xcode shell project that uses the package
+App/Zapdrop.xcodeproj           Xcode shell project that uses the package
 Tests/…                       unit tests (run on Linux and macOS)
 Scripts/                      build-deps, build-app, make-dmg, notarize
 docs/                         this folder

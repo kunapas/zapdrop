@@ -31,7 +31,7 @@ if command -v brew >/dev/null; then
 fi
 
 # libtool cannot cope with whitespace in paths, so compile in a temporary directory that has none.
-WORK=$(cd "$(mktemp -d /tmp/ferry-deps.XXXXXX)" && pwd -P)
+WORK=$(cd "$(mktemp -d /tmp/zapdrop-deps.XXXXXX)" && pwd -P)
 trap 'rm -rf "$WORK"' EXIT
 
 fetch() { # repo tag commit dir
@@ -43,6 +43,11 @@ fetch() { # repo tag commit dir
   actual=$(git -C "$dir" rev-parse HEAD)
   if [[ "$actual" != "$commit" ]]; then
     echo "Commit mismatch for $repo $tag: expected $commit, got $actual" >&2
+    exit 1
+  fi
+  # The pinned commit means nothing if tracked files were edited afterwards.
+  if [[ -n "$(git -C "$dir" status --porcelain --untracked-files=no)" ]]; then
+    echo "Modified files in $dir: delete the folder and run this script again." >&2
     exit 1
   fi
 }

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Notarises and staples the DMG. One-time setup (stores an app-specific password in the keychain):
 #   xcrun notarytool store-credentials zapdrop-notary --apple-id you@example.com --team-id TEAMID
-# Then: FERRY_NOTARY_PROFILE=zapdrop-notary Scripts/notarize.sh
+# Then: ZAPDROP_NOTARY_PROFILE=zapdrop-notary Scripts/notarize.sh
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 
 DMG="$DIST_DIR/$APP_NAME-$APP_VERSION.dmg"
-PROFILE="${FERRY_NOTARY_PROFILE:?Set FERRY_NOTARY_PROFILE to a notarytool keychain profile}"
+PROFILE="${ZAPDROP_NOTARY_PROFILE:?Set ZAPDROP_NOTARY_PROFILE to a notarytool keychain profile}"
 [[ -f "$DMG" ]] || { echo "Create the DMG first: Scripts/make-dmg.sh" >&2; exit 1; }
 
 xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait

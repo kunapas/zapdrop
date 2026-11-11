@@ -15,16 +15,18 @@ The phone is connected but file sharing is off.
 Android hides storage until it's unlocked. Some phones (Samsung, Xiaomi) also ask **Allow access to phone
 data?** — tap **Allow**. Zapdrop checks again automatically every couple of seconds.
 
-## "Phone is in use by another app"
-Only one program can talk to the phone at a time. Quit any of these, then click **Try Again**:
-Image Capture, Photos, Preview (Import), Android File Transfer, Samsung Smart Switch, OpenMTP, MacDroid,
-Handshaker, Kies.
+## "Another app is using your phone"
+Only one program can talk to the phone at a time.
 
-Still blocked? macOS's background camera service (`ptpcamerad`) often grabs phones automatically.
-Click **Release Phone from macOS Camera Service**. It ends that process for your user account (macOS
-restarts it when needed), and Zapdrop immediately tries again. Equivalent Terminal command:
-`killall -9 ptpcamerad` (it ignores a plain `killall`), then click **Try Again** within a second. If Photos is set to open when a device connects, turn that off in Image Capture
-(select the phone → "Connecting this iPhone/device opens: No application").
+- **macOS's camera service** (`ptpcamerad`) grabs phones as soon as they're plugged in — and again every time the
+  phone reconnects, for example after you tap Allow. Zapdrop takes the phone back automatically (Settings › "Take it
+  back from the macOS camera service automatically"). It ends that process for your user account; macOS restarts it
+  when needed and nothing is lost.
+- **An app of yours** (Image Capture, Photos, Android File Transfer and its Agent, Samsung Smart Switch, OpenMTP,
+  MacDroid, HandShaker, Commander One): Zapdrop names it and offers **Free Up Phone & Connect**, which quits it
+  normally (it can save first) and connects. Tick **Always do this automatically** to skip the question next time.
+- **Still blocked?** Unplug the phone, plug it back in, and try once more. If Photos opens whenever a phone connects,
+  turn that off in Image Capture (select the phone → "Connecting this device opens: No application").
 
 ## Transfer stopped: "Phone disconnected"
 Files already finished are complete and kept; the unfinished file was deleted. Reconnect, unlock,

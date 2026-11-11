@@ -3,17 +3,19 @@
 Thanks for helping. Zapdrop aims to be small, reliable, private and free forever.
 
 ## Ground rules
-- **No network code, telemetry, analytics, ads, accounts, licence checks or usage limits.** PRs adding any
+- **No network code, telemetry, analytics, ads, accounts, licence checks or usage limits.** (The optional donation
+  link just opens the browser.) PRs adding any
   of these will be closed.
-- **Read-only towards the phone** until copying is proven on many devices. Deleting or changing phone files
-  needs a design discussion first (open an issue).
+- **Zapdrop only ever adds to the phone.** It can copy files and folders to it, but never overwrites, renames or
+  deletes anything there: a name that's taken gets a number. Deleting or changing phone files needs a design
+  discussion first (open an issue).
 - **One MTP request at a time.** All libmtp calls go through `DeviceQueue.shared`. Don't add parallel device I/O.
-- **Only `Sources/CFerryMTP` includes libmtp headers; only `Sources/FerryLibMTP` imports it.**
+- **Only `Sources/CZapdropMTP` includes libmtp headers; only `Sources/ZapdropLibMTP` imports it.**
 - New dependencies need a strong reason and a licence compatible with MIT + LGPL dynamic linking.
 
 ## Getting started
 See README → Building. Most work needs no phone: run the app with `--mock`, and write tests against
-`FerryMock` (it can simulate locked phones, busy devices, disconnects, faults on specific files, and files of
+`ZapdropMock` (it can simulate locked phones, busy devices, disconnects, faults on specific files, and files of
 any size without using memory).
 
 ## Before opening a pull request

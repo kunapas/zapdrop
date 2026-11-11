@@ -1,5 +1,7 @@
 # Zapdrop
 
+*Android files to your Mac, in a zap!*
+
 **Copy photos, videos and files from an Android phone to your Mac over USB.**
 Free, open source, private, and with no artificial limits.
 
@@ -25,13 +27,17 @@ Free, open source, private, and with no artificial limits.
 More:
 - **Quick Look**: select a file and press Space (or right-click → Quick Look, or ⌘Y).
 - **Drag to Finder**: drag files or folders onto the Desktop or a Finder window to copy them there.
-- **Phone details**: the sidebar shows the connected phone's storage, battery level and USB speed.
+- **Copy to the phone**: drag files or folders from Finder into the window, copy them in Finder and paste
+  (⌘V or right-click → Paste), or use **Copy to Phone** in the toolbar. Zapdrop only adds: a name that's already taken gets a number, and nothing on the phone is
+  overwritten or deleted. Files of 4 GB or more can't be sent.
+- **Phone details**: the top of the window shows the connected phone's storage, battery level and USB speed.
 - **Space tips**: folders with big videos, old camera photos, screenshots, installers and the like show a tip,
   with **Select These** so you can copy them before deleting them on the phone.
 - **Eject** (⏏ next to the phone, or ⌘E) before unplugging, or to let another app use the phone.
 
-If Zapdrop says the phone is **in use by another app**, quit Image Capture, Photos, Android File Transfer,
-Samsung Smart Switch or OpenMTP. If it still won't connect, click **Release Phone from macOS Camera Service**.
+macOS's camera service grabs phones as soon as they're plugged in; Zapdrop takes the phone back automatically.
+If an app of yours has it (Photos, Image Capture, Android File Transfer, Smart Switch, OpenMTP…), Zapdrop names it
+and offers **Free Up Phone & Connect** — tick **Always do this automatically** and it won't ask again.
 More help: [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 ## Limits (honestly)
@@ -63,9 +69,9 @@ Scripts/build-app.sh      # creates dist/Zapdrop.app (ad-hoc signed; runs on thi
 open dist/Zapdrop.app
 ```
 
-- **Try it without a phone:** `open dist/Zapdrop.app --args --mock` (or run with `FERRY_MOCK=1`).
-- **UI work without building libmtp:** `FERRY_MOCK_ONLY=1 Scripts/build-app.sh`.
-- **Xcode:** run `Scripts/build-deps.sh` once, then open `App/Ferry.xcodeproj` and run the *Ferry* scheme
+- **Try it without a phone:** `open dist/Zapdrop.app --args --mock` (or run with `ZAPDROP_MOCK=1`).
+- **UI work without building libmtp:** `ZAPDROP_MOCK_ONLY=1 Scripts/build-app.sh`.
+- **Xcode:** run `Scripts/build-deps.sh` once, then open `App/Zapdrop.xcodeproj` and run the *Zapdrop* scheme
   (enable the `--mock` argument in the scheme to use the simulated phone).
 - **Release build** (Developer ID, notarised DMG): see [`docs/RELEASING.md`](docs/RELEASING.md).
 
@@ -73,13 +79,21 @@ open dist/Zapdrop.app
 
 | Path | What |
 |---|---|
-| `Sources/FerryCore` | Models, transfer engine, file safety, error messages (no UI, no USB) |
-| `Sources/FerryMock` | Simulated phone for development and tests |
-| `Sources/CFerryMTP` | Small C layer: the only code that touches libmtp/libusb |
-| `Sources/FerryLibMTP` | Real phone backend built on the C layer |
-| `Sources/FerryAppModel` | View models: browsing, devices, transfers, settings |
-| `App/Ferry` | SwiftUI app (macOS only) |
+| `Sources/ZapdropCore` | Models, transfer engine, file safety, error messages (no UI, no USB) |
+| `Sources/ZapdropMock` | Simulated phone for development and tests |
+| `Sources/CZapdropMTP` | Small C layer: the only code that touches libmtp/libusb |
+| `Sources/ZapdropLibMTP` | Real phone backend built on the C layer |
+| `Sources/ZapdropAppModel` | View models: browsing, devices, transfers, settings |
+| `App/Zapdrop` | SwiftUI app (macOS only) |
 | `docs/` | [Architecture](docs/ARCHITECTURE.md), [decisions](docs/DECISIONS.md), [feasibility](docs/FEASIBILITY.md), [plan](docs/PLAN.md), [testing](docs/TESTING.md) |
+
+## Support Zapdrop
+
+Zapdrop is free and always will be. If it saves you time, you can buy the maintainer a coffee from
+**Zapdrop › Buy Me a Coffee…** (also in the Help menu and About).
+
+Building your own copy? The link is one setting: `SUPPORT_URL` in `Scripts/config.sh` (or
+`ZAPDROP_SUPPORT_URL=https://… Scripts/build-app.sh`). Leave it empty and the menu items disappear.
 
 ## Privacy
 

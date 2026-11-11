@@ -1,12 +1,13 @@
 name: Release (signed and notarised)
 
-# Runs only when a maintainer pushes a version tag and the signing secrets exist.
+# Runs only when a maintainer pushes a version tag and the signing secrets exist. The job uses the "release"
+# environment: protect it in the repository settings (required reviewers, tags only) so a branch can't reach the
+# signing secrets. Actions are pinned to commits, and no third-party action runs while the certificate is loaded.
 # Secrets: DEVELOPER_ID_P12_BASE64, DEVELOPER_ID_P12_PASSWORD, DEVELOPER_ID_IDENTITY,
 #          NOTARY_APPLE_ID, NOTARY_TEAM_ID, NOTARY_PASSWORD (app-specific password)
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,11 +15,11 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
-    if: ${{ github.repository_owner != '' }}
+    environment: release
     env:
       HAS_SECRETS: ${{ secrets.DEVELOPER_ID_P12_BASE64 != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Stop if signing secrets are missing
         if: env.HAS_SECRETS != 'true'
         run: echo "Signing secrets not configured — nothing to release." && exit 1
@@ -30,16 +31,17 @@ jobs:
         run: |
           KEYCHAIN=$RUNNER_TEMP/signing.keychain-db
           KC_PASS=$(uuidgen)
-          echo "$P12" | base64 --decode > $RUNNER_TEMP/cert.p12
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
           security create-keychain -p "$KC_PASS" "$KEYCHAIN"
           security set-keychain-settings -lut 3600 "$KEYCHAIN"
           security unlock-keychain -p "$KC_PASS" "$KEYCHAIN"
-          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$P12_PASSWORD" -T /usr/bin/codesign -t cert -f pkcs12 -k "$KEYCHAIN"
+          rm -f "$RUNNER_TEMP/cert.p12"
           security set-key-partition-list -S apple-tool:,apple: -k "$KC_PASS" "$KEYCHAIN"
           security list-keychain -d user -s "$KEYCHAIN"
       - name: Build, sign, package
         env:
-          FERRY_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
+          ZAPDROP_SIGN_IDENTITY: ${{ secrets.DEVELOPER_ID_IDENTITY }}
         run: |
           Scripts/build-deps.sh
           swift test
@@ -51,11 +53,14 @@ jobs:
           TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
           PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
         run: |
-          xcrun notarytool store-credentials ferry-ci --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$PASSWORD"
-          FERRY_NOTARY_PROFILE=ferry-ci Scripts/notarize.sh
-      - uses: softprops/action-gh-release@v2
-        with:
-          draft: true
-          files: |
-            dist/*.dmg
-            dist/*.sha256
+          xcrun notarytool store-credentials zapdrop-ci --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$PASSWORD"
+          ZAPDROP_NOTARY_PROFILE=zapdrop-ci Scripts/notarize.sh
+      - name: Remove the signing keychain
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/cert.p12"
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" dist/*.dmg dist/*.sha256

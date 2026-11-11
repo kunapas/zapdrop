@@ -1,0 +1,309 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		F3A100000000000000000001 /* ZapdropCore in Frameworks */ = {isa = PBXBuildFile; productRef = F3A100000000000000000002 /* ZapdropCore */; };
+		F3A100000000000000000003 /* ZapdropAppModel in Frameworks */ = {isa = PBXBuildFile; productRef = F3A100000000000000000004 /* ZapdropAppModel */; };
+		F3A100000000000000000005 /* ZapdropMock in Frameworks */ = {isa = PBXBuildFile; productRef = F3A100000000000000000006 /* ZapdropMock */; };
+		F3A100000000000000000007 /* ZapdropLibMTP in Frameworks */ = {isa = PBXBuildFile; productRef = F3A100000000000000000008 /* ZapdropLibMTP */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F3A100000000000000000009 /* Zapdrop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Zapdrop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F3A10000000000000000000A /* Zapdrop */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Zapdrop;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F3A10000000000000000000B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F3A100000000000000000001 /* ZapdropCore in Frameworks */,
+				F3A100000000000000000003 /* ZapdropAppModel in Frameworks */,
+				F3A100000000000000000005 /* ZapdropMock in Frameworks */,
+				F3A100000000000000000007 /* ZapdropLibMTP in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F3A10000000000000000000C = {
+			isa = PBXGroup;
+			children = (
+				F3A10000000000000000000A /* Zapdrop */,
+				F3A10000000000000000000D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F3A10000000000000000000D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F3A100000000000000000009 /* Zapdrop.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F3A10000000000000000000E /* Zapdrop */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F3A10000000000000000000F /* Build configuration list for PBXNativeTarget "Zapdrop" */;
+			buildPhases = (
+				F3A100000000000000000010 /* Sources */,
+				F3A10000000000000000000B /* Frameworks */,
+				F3A100000000000000000011 /* Resources */,
+				F3A100000000000000000012 /* Embed libmtp and libusb */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F3A10000000000000000000A /* Zapdrop */,
+			);
+			name = Zapdrop;
+			packageProductDependencies = (
+				F3A100000000000000000002 /* ZapdropCore */,
+				F3A100000000000000000004 /* ZapdropAppModel */,
+				F3A100000000000000000006 /* ZapdropMock */,
+				F3A100000000000000000008 /* ZapdropLibMTP */,
+			);
+			productName = Zapdrop;
+			productReference = F3A100000000000000000009 /* Zapdrop.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F3A100000000000000000013 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					F3A10000000000000000000E = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = F3A100000000000000000014 /* Build configuration list for PBXProject "Zapdrop" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F3A10000000000000000000C;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F3A100000000000000000015 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F3A10000000000000000000D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F3A10000000000000000000E /* Zapdrop */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F3A100000000000000000011 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F3A100000000000000000012 /* Embed libmtp and libusb */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed libmtp and libusb";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"${PROJECT_DIR}/../Scripts/embed-dylibs.sh\" \"${TARGET_BUILD_DIR}/${WRAPPER_NAME}\" \"${EXPANDED_CODE_SIGN_IDENTITY:--}\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F3A100000000000000000010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F3A100000000000000000016 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F3A100000000000000000017 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		F3A100000000000000000018 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Support/Zapdrop.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.zapdrop.Zapdrop";
+				PRODUCT_NAME = Zapdrop;
+				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InferSendableFromCaptures";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F3A100000000000000000019 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Support/Zapdrop.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Support/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "io.github.zapdrop.Zapdrop";
+				PRODUCT_NAME = Zapdrop;
+				OTHER_SWIFT_FLAGS = "$(inherited) -enable-upcoming-feature InferSendableFromCaptures";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F3A100000000000000000014 /* Build configuration list for PBXProject "Zapdrop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3A100000000000000000016 /* Debug */,
+				F3A100000000000000000017 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F3A10000000000000000000F /* Build configuration list for PBXNativeTarget "Zapdrop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F3A100000000000000000018 /* Debug */,
+				F3A100000000000000000019 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F3A100000000000000000015 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F3A100000000000000000002 /* ZapdropCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZapdropCore;
+		};
+		F3A100000000000000000004 /* ZapdropAppModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZapdropAppModel;
+		};
+		F3A100000000000000000006 /* ZapdropMock */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZapdropMock;
+		};
+		F3A100000000000000000008 /* ZapdropLibMTP */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ZapdropLibMTP;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F3A100000000000000000013 /* Project object */;
+}

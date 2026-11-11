@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Renders the app icon (Scripts/make-icon.swift) and packs every Mac size into App/Ferry/AppIcon.icns.
+# Renders the app icon (Scripts/make-icon.swift) and packs every Mac size into App/Zapdrop/AppIcon.icns.
 # Also keeps the 1024 px master at App/Support/AppIcon-1024.png (for the App Store and asset catalogs).
 #   Scripts/make-icon.sh
 set -euo pipefail
@@ -17,6 +17,6 @@ for size in 16 32 128 256 512; do
   double=$((size * 2))
   sips -z "$double" "$double" "$MASTER" --out "$SET/icon_${size}x${size}@2x.png" >/dev/null
 done
-iconutil -c icns "$SET" -o "$ROOT_DIR/App/Ferry/AppIcon.icns"
+iconutil -c icns "$SET" -o "$ROOT_DIR/App/Zapdrop/AppIcon.icns"
 cp "$MASTER" "$ROOT_DIR/App/Support/AppIcon-1024.png"
-echo "Wrote App/Ferry/AppIcon.icns and App/Support/AppIcon-1024.png"
+echo "Wrote App/Zapdrop/AppIcon.icns and App/Support/AppIcon-1024.png"

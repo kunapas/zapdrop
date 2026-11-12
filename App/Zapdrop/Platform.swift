@@ -13,7 +13,7 @@ typealias Model = AppModel<CGImage>
 // MARK: - Logging (local only; file names are marked private so macOS redacts them in logs)
 
 struct OSLogLogger: ApplicationLogger {
-    private let subsystem = Bundle.main.bundleIdentifier ?? "io.github.zapdrop.Zapdrop"
+    private let subsystem = Bundle.main.bundleIdentifier ?? "io.github.kunapas.Zapdrop"
 
     func log(_ level: LogLevel, _ category: String, _ message: String, privateValue: String?) {
         let logger = Logger(subsystem: subsystem, category: category)

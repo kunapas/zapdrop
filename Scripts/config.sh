@@ -3,7 +3,7 @@
 # shellcheck disable=SC2034
 
 APP_NAME="Zapdrop"
-BUNDLE_ID="${ZAPDROP_BUNDLE_ID:-io.github.zapdrop.Zapdrop}"   # change before publishing
+BUNDLE_ID="${ZAPDROP_BUNDLE_ID:-io.github.kunapas.Zapdrop}"
 APP_VERSION="0.1.0"
 APP_BUILD="1"
 MIN_MACOS="14.0"

@@ -14,6 +14,20 @@ Free, open source, private, and with no artificial limits.
 > automatically. The macOS interface is built by CI; real-phone testing follows
 > [`docs/DEVICE_TEST_CHECKLIST.md`](docs/DEVICE_TEST_CHECKLIST.md). Please report phones that misbehave.
 
+## Install
+
+1. Download the latest **Zapdrop** disk image (`.dmg`) from [Releases](https://github.com/kunapas/zapdrop/releases/latest).
+2. Open it and drag **Zapdrop** into your Applications folder.
+3. Open Zapdrop. The first time, macOS says it can't verify the app, because this build isn't signed with an Apple
+   developer certificate yet. To allow it: open **System Settings → Privacy & Security**, scroll down to the
+   message about Zapdrop and click **Open Anyway**. You only do this once.
+
+Prefer the Terminal? This does the same as step 3:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Zapdrop.app
+```
+
 ## Using Zapdrop
 
 1. Open Zapdrop and connect your phone with a USB cable that supports data.

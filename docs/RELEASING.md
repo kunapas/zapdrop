@@ -26,7 +26,10 @@ What gets signed, inside out: `libusb-1.0.0.dylib`, `libmtp.9.dylib` (in `Conten
 app (with `App/Support/Zapdrop.entitlements`), then the DMG. Never use `codesign --deep` for release signing.
 
 Automated alternative: `.github/workflows/release.yml` does the same on a `v*` tag when the signing
-secrets are configured, and drafts a GitHub release.
+secrets are configured, and drafts a GitHub release. It stays off until the repository variable
+`SIGNED_RELEASES` is set to `true` (Settings → Secrets and variables → Actions → Variables), so tags pushed
+before signing is set up don't start a run that can only fail. Until then, build with `Scripts/build-app.sh` and
+`Scripts/make-dmg.sh` and attach the unsigned disk image to the release by hand.
 
 ## Release checklist
 - [ ] Version bumped in `Scripts/config.sh` (`APP_VERSION`, `APP_BUILD`) and the Xcode project (`MARKETING_VERSION`, `CURRENT_PROJECT_VERSION`).
